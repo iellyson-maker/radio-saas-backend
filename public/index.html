@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#090d13">
+  <title>RadioOS — Central de Operação</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand"><div class="brand-mark">R</div><div><strong>Radio<span>OS</span></strong><small>Broadcast Control</small></div></div>
+      <div class="station">
+        <span class="live-dot"></span><div><b>Rádio Central</b><small>Operação principal</small></div><button class="icon-btn">•••</button>
+      </div>
+      <nav>
+        <div class="nav-label">OPERAÇÃO</div>
+        <a class="active" href="#"><span>◈</span> Console</a>
+        <a href="#"><span>◫</span> Programação</a>
+        <a href="#"><span>♫</span> Biblioteca</a>
+        <a href="#"><span>▤</span> Playlists</a>
+        <div class="nav-label">GESTÃO</div>
+        <a href="#"><span>◉</span> Campanhas</a>
+        <a href="#"><span>◌</span> Relatórios</a>
+        <a href="#"><span>⚙</span> Configurações</a>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="connection"><span class="live-dot"></span><div><b>STREAM ONLINE</b><small>Icecast · 128 kbps</small></div></div>
+        <div class="user"><div class="avatar">IA</div><div><b>Operador</b><small>Administrador</small></div></div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div><div class="eyebrow">CENTRAL DE OPERAÇÃO</div><h1>Console</h1></div>
+        <div class="top-actions"><div class="clock" id="clock">10:51:00</div><button class="outline">◉ Monitor</button><button class="primary">＋ Nova programação</button></div>
+      </header>
+
+      <section class="hero-grid">
+        <div class="now-playing panel">
+          <div class="panel-head"><span class="section-title"><span class="eq-icon">≋</span> NO AR AGORA</span><span class="live-pill">● LIVE</span></div>
+          <div class="track">
+            <div class="cover"><div class="cover-inner">♫</div></div>
+            <div class="track-info"><span class="track-kicker">PROGRAMA · MANHÃ CENTRAL</span><h2>Horizonte Aberto</h2><p>Rádio Central • Bloco Musical</p><div class="progress"><span id="progress"></span></div><div class="times"><span>02:14</span><span>04:37</span></div></div>
+            <div class="transport"><button>↶</button><button class="play" id="play">▶</button><button>↷</button></div>
+          </div>
+          <div class="wave"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        </div>
+        <div class="level-panel panel">
+          <div class="panel-head"><span class="section-title">MASTER OUT</span><span class="db">-0.3 dB</span></div>
+          <div class="meters"><div class="meter"><div class="meter-fill" style="height:78%"></div><span>L</span></div><div class="meter"><div class="meter-fill" style="height:69%"></div><span>R</span></div></div>
+          <div class="meter-scale"><span>0</span><span>-6</span><span>-12</span><span>-24</span><span>-48</span></div>
+          <div class="level-footer"><span>PEAK</span><b>-0.3</b><span>LUFS</span><b>-13.8</b></div>
+        </div>
+      </section>
+
+      <section class="console panel">
+        <div class="panel-head"><span class="section-title">CHANNELS</span><span class="muted">4 canais ativos</span></div>
+        <div class="channels">
+          <div class="channel"><div class="ch-top"><b>MIC 01</b><span>ON</span></div><div class="knob">◉</div><div class="channel-meter"><span style="height:58%"></span></div><div class="fader"><span style="height:62%"></span><i></i></div><div class="ch-foot"><b>-8.2 dB</b><small>LOCUTOR</small></div></div>
+          <div class="channel"><div class="ch-top"><b>MUSIC</b><span>ON</span></div><div class="knob">◉</div><div class="channel-meter"><span style="height:82%"></span></div><div class="fader"><span style="height:74%"></span><i></i></div><div class="ch-foot"><b>-3.1 dB</b><small>PLAYLIST</small></div></div>
+          <div class="channel"><div class="ch-top"><b>JINGLES</b><span>READY</span></div><div class="knob">◉</div><div class="channel-meter"><span style="height:41%"></span></div><div class="fader"><span style="height:49%"></span><i></i></div><div class="ch-foot"><b>-12.5 dB</b><small>ROTATION</small></div></div>
+          <div class="channel"><div class="ch-top"><b>ADS</b><span>READY</span></div><div class="knob">◉</div><div class="channel-meter"><span style="height:35%"></span></div><div class="fader"><span style="height:45%"></span><i></i></div><div class="ch-foot"><b>-14.0 dB</b><small>COMERCIAL</small></div></div>
+          <div class="channel monitor-channel"><div class="ch-top"><b>MONITOR</b><span>SAFE</span></div><div class="knob">◉</div><div class="monitor-box">A<br><small>HEADPHONES</small></div><button class="cue">CUE</button><div class="ch-foot"><b>−18 LUFS</b><small>MONITOR</small></div></div>
+        </div>
+      </section>
+
+      <section class="lower-grid">
+        <div class="panel queue">
+          <div class="panel-head"><span class="section-title">PRÓXIMOS NA GRADE</span><button class="text-btn">Ver programação →</button></div>
+          <div class="queue-item current"><span class="time">11:00</span><div class="q-icon">♫</div><div><b>Pop & Hits — Bloco 04</b><small>Playlist · 12 faixas</small></div><span class="status">EM SEGUIDA</span></div>
+          <div class="queue-item"><span class="time">11:42</span><div class="q-icon ad">AD</div><div><b>Break Comercial</b><small>4 inserções · 02:30</small></div><span class="duration">02:30</span></div>
+          <div class="queue-item"><span class="time">12:00</span><div class="q-icon">MIC</div><div><b>Almoço Central</b><small>Programa ao vivo</small></div><span class="duration">01:00</span></div>
+        </div>
+        <div class="panel events">
+          <div class="panel-head"><span class="section-title">ATIVIDADE</span><span class="muted">últimas 24h</span></div>
+          <div class="stat-row"><div><small>FAIXAS REPRODUZIDAS</small><b>186</b></div><div><small>INSERÇÕES</small><b>42</b></div><div><small>UPTIME</small><b>99,98%</b></div></div>
+          <div class="mini-chart"><span style="height:35%"></span><span style="height:54%"></span><span style="height:42%"></span><span style="height:71%"></span><span style="height:62%"></span><span style="height:86%"></span><span style="height:73%"></span><span style="height:92%"></span><span style="height:66%"></span><span style="height:80%"></span><span style="height:94%"></span><span style="height:76%"></span></div>
+        </div>
+      </section>
+    </main>
+  </div>
+  <script src="/app.js"></script>
+</body>
+</html>

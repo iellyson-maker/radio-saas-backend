@@ -1,12 +1,20 @@
 const { Pool } = require('pg');
 
-// No Render, a variável DATABASE_URL é injetada automaticamente quando
-// você conecta o web service ao banco PostgreSQL pelo dashboard (ou via render.yaml).
+const databaseUrl = process.env.DATABASE_URL;
+
+if (!databaseUrl) {
+  console.warn('DATABASE_URL não definida. O servidor iniciará, mas as operações de banco falharão até a variável ser configurada.');
+}
+
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_URL?.includes('render.com')
+  connectionString: databaseUrl,
+  ssl: databaseUrl && !/localhost|127\.0\.0\.1/.test(databaseUrl)
     ? { rejectUnauthorized: false }
     : false
+});
+
+pool.on('error', (err) => {
+  console.error('Erro inesperado no pool PostgreSQL:', err);
 });
 
 module.exports = pool;

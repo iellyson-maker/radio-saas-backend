@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 
 const organizationsRouter = require('./organizations');
 
@@ -18,7 +19,12 @@ app.get('/health', (req, res) => {
   });
 });
 
+app.use(express.static(path.join(__dirname, 'public')));
 app.use('/organizations', organizationsRouter);
+
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 
 app.use((req, res) => {
   res.status(404).json({ error: 'Rota não encontrada' });

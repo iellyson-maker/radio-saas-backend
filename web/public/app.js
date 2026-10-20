@@ -1,32 +1,725 @@
 (() => {
 "use strict";
+
 const $ = id => document.getElementById(id);
-const audio=$("audio"); let media=[],queue=[],current=null,filter="all",auto=false,segue=false,logs=[],audioCtx,analyser,source,meterTimer;
-const fmt=s=>{s=Number.isFinite(s)?Math.max(0,Math.floor(s)):0;return String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0")};
-const classify=n=>/vinheta|jingle|id.?radio/i.test(n)?"jingle":/spot|comercial|anuncio/i.test(n)?"spot":/trilha|bed|instrumental/i.test(n)?"track":"music";
-function log(s){logs.unshift(new Date().toLocaleTimeString("pt-BR")+" — "+s);logs=logs.slice(0,100);$("logList").innerHTML=logs.slice(0,30).map(x=>"<div>"+escapeHtml(x)+"</div>").join("");}
-function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
-function drawLibrary(){const q=$("search").value.toLowerCase();const rows=media.filter(m=>(filter==="all"||m.type===filter)&&m.name.toLowerCase().includes(q));$("count").textContent=media.length+" arquivos";$("libraryList").classList.toggle("empty",!rows.length);$("libraryList").innerHTML=rows.length?rows.map(m=>'<div class="item"><span class="name" title="'+escapeHtml(m.name)+'">'+escapeHtml(m.name)+'<br><small>'+m.type.toUpperCase()+' · '+fmt(m.duration)+'</small></span><button data-play="'+m.id+'">▶</button><button data-add="'+m.id+'">＋ FILA</button></div>').join():"Nenhum arquivo nesta categoria.";drawCarts();}
-function drawCarts(){const rows=media.filter(m=>["jingle","spot","track"].includes(m.type));$("cartList").classList.toggle("empty",!rows.length);$("cartList").innerHTML=rows.length?rows.map(m=>'<button class="cart" data-play="'+m.id+'"><b>'+escapeHtml(m.name)+'</b><small>'+m.type.toUpperCase()+' · '+fmt(m.duration)+'</small><span>▶ DISPARAR</span></button>').join():"Importe vinhetas, comerciais ou trilhas.";}
-function drawQueue(){ $("queueCount").textContent=queue.length+" itens";$("queueList").classList.toggle("empty",!queue.length);$("queueList").innerHTML=queue.length?queue.map((m,i)=>'<div class="item"><span class="name">'+(i+1)+'. '+escapeHtml(m.name)+'<br><small>'+fmt(m.duration)+'</small></span><button data-remove="'+i+'">×</button></div>').join():"Fila vazia. Adicione áudios pela biblioteca.";}
-function addQueue(m){queue.push(m);drawQueue();log("Adicionado à fila: "+m.name);}
-function play(m){if(!m)return;current=m;audio.src=m.url;audio.play().then(()=>{ $("playState").textContent="REPRODUZINDO";$("status").textContent="NO AR";log("Reprodução iniciada: "+m.name);}).catch(e=>{ $("status").textContent="ERRO DE ÁUDIO";log("Falha ao reproduzir "+m.name+": "+e.message);});$("currentTitle").textContent=m.name;$("currentMeta").textContent=m.type.toUpperCase()+" · ARQUIVO LOCAL";$("duration").textContent=fmt(m.duration);$("playBtn").textContent="Ⅱ";}
-function next(){if(queue.length){play(queue.shift());drawQueue();}else if(auto&&media.length){play(media[0]);}else{audio.pause();$("playState").textContent="FIM DA FILA";$("status").textContent="PRONTO";$("playBtn").textContent="▶";}}
-$("importBtn").onclick=()=>$("fileInput").click();
-$("fileInput").onchange=async e=>{for(const f of e.target.files){const url=URL.createObjectURL(f);const m={id:crypto.randomUUID(),name:f.name,type:classify(f.name),url,file:f,duration:0};await new Promise(resolve=>{const a=new Audio();a.preload="metadata";a.onloadedmetadata=()=>{m.duration=a.duration||0;resolve();};a.onerror=()=>resolve();a.src=url;});media.push(m);log("Importado: "+m.name);}drawLibrary();e.target.value="";};
-$("search").oninput=drawLibrary;document.querySelectorAll("[data-filter]").forEach(b=>b.onclick=()=>{filter=b.dataset.filter;document.querySelectorAll("[data-filter]").forEach(x=>x.classList.toggle("active",x===b));drawLibrary();});
-document.addEventListener("click",e=>{const p=e.target.closest("[data-play]");if(p){const m=media.find(x=>x.id===p.dataset.play);if(m)play(m);}const a=e.target.closest("[data-add]");if(a){const m=media.find(x=>x.id===a.dataset.add);if(m)addQueue(m);}const r=e.target.closest("[data-remove]");if(r){queue.splice(Number(r.dataset.remove),1);drawQueue();}});
-$("playBtn").onclick=()=>{if(!current){if(queue.length)next();else if(media.length)play(media[0]);return;}if(audio.paused)audio.play().then(()=>{$("playBtn").textContent="Ⅱ";$("playState").textContent="REPRODUZINDO";});else{audio.pause();$("playBtn").textContent="▶";$("playState").textContent="PAUSADO";}};
-$("stopBtn").onclick=()=>{audio.pause();audio.currentTime=0;$("playBtn").textContent="▶";$("playState").textContent="PARADO";$("status").textContent="PRONTO";};
-$("nextBtn").onclick=next;$("prevBtn").onclick=()=>{if(current)audio.currentTime=0;};$("segueBtn").onclick=()=>{segue=!segue;$("segueBtn").textContent="SEGUE: "+(segue?"ON":"OFF");log("Segue "+(segue?"ativado: avança para o próximo áudio ao terminar":"desativado: reprodução para ao fim da faixa, salvo modo automático"));};
-$("fadeBtn").onclick=()=>{if(audio.paused)return;const start=audio.volume,step=50;let n=0;const t=setInterval(()=>{n++;audio.volume=Math.max(0,start*(1-n/step));if(n>=step){clearInterval(t);audio.volume=start;next();}},100);log("Fade-out solicitado");};
-$("clearQueue").onclick=()=>{queue=[];drawQueue();log("Fila limpa");};$("autoBtn").onclick=()=>{auto=!auto;$("autoBtn").textContent="AUTOMAÇÃO: "+(auto?"ON":"OFF");$("mode").textContent=auto?"MODO AUTOMÁTICO (PÁGINA ABERTA)":"MODO MANUAL";log("Modo automático "+(auto?"ativado":"desativado"));};
-audio.onended=()=>{if(queue.length&&(auto||segue))next();else{$("playBtn").textContent="▶";$("playState").textContent="FIM DA FAIXA";$("status").textContent="PRONTO";}};
-audio.ontimeupdate=()=>{const d=audio.duration||0;$("elapsed").textContent=fmt(audio.currentTime);$("duration").textContent=fmt(d);$("progress").style.width=d?(audio.currentTime/d*100)+"%":"0%";};
-audio.onerror=()=>{if(current)log("Erro de leitura de áudio: "+current.name);if(queue.length)next();};
-audio.onplay=()=>{try{if(!audioCtx){audioCtx=new AudioContext();source=audioCtx.createMediaElementSource(audio);analyser=audioCtx.createAnalyser();analyser.fftSize=256;source.connect(analyser);analyser.connect(audioCtx.destination);}audioCtx.resume();const data=new Uint8Array(analyser.frequencyBinCount);clearInterval(meterTimer);meterTimer=setInterval(()=>{analyser.getByteFrequencyData(data);const v=data.reduce((a,b)=>a+b,0)/data.length/255;for(const id of ["leftMeter","rightMeter"]){$(id).style.opacity=String(.2+v*.8);$(id).style.width=(Math.max(2,v*100))+"px";}},100);}catch(_){/* Browser audio graph can be unavailable; playback remains usable. */}};
-$("exportLog").onclick=()=>{const blob=new Blob([JSON.stringify({exportedAt:new Date().toISOString(),logs},null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="radioos-logs.json";a.click();URL.revokeObjectURL(a.href);};
-setInterval(()=>$("clock").textContent=new Date().toLocaleTimeString("pt-BR"),1000);
-fetch("/health").then(r=>r.json()).then(x=>$("health").textContent="SERVIÇO ONLINE · "+x.version).catch(()=>$("health").textContent="SERVIDOR NÃO VERIFICADO");
-drawLibrary();drawQueue();log("Console iniciado. Os áudios permanecem locais neste navegador.");
+const DB_NAME = "qolan-studio-db";
+const DB_VERSION = 1;
+const APP_KEY = "main";
+const CATEGORY_LABELS = { music:"Música", jingle:"Vinheta", spot:"Comercial", track:"Trilha" };
+let db = null;
+let media = [];
+let queue = [];
+let current = null;
+let filter = "all";
+let cartFilter = "all";
+let auto = false;
+let segue = false;
+let schedules = [];
+let campaigns = [];
+let logs = [];
+let settings = { stationName:"Rádio Central", frequency:"98.7 FM", timezone:"America/Sao_Paulo" };
+let audioContext = null;
+let mediaSource = null;
+let splitter = null;
+let analyzers = [];
+let meterNodes = [];
+let meterTimer = null;
+let fadeTimer = null;
+let activeSession = null;
+let pendingSource = "manual";
+let toastTimer = null;
+let lastSchedulerMinute = "";
+let urlSet = new Set();
+
+const now = () => new Date();
+const uid = () => crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2);
+const pad = n => String(n).padStart(2,"0");
+const fmt = sec => {
+  sec = Number.isFinite(Number(sec)) ? Math.max(0,Math.floor(Number(sec))) : 0;
+  return pad(Math.floor(sec/60)) + ":" + pad(sec%60);
+};
+const localDateKey = d => d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+const timeKey = d => pad(d.getHours())+":"+pad(d.getMinutes());
+const escapeHtml = value => String(value == null ? "" : value).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const bytesLabel = n => {
+  if (!Number.isFinite(Number(n))) return "—";
+  const v = Number(n);
+  if (v < 1024) return v+" B";
+  if (v < 1048576) return (v/1024).toFixed(1)+" KB";
+  return (v/1048576).toFixed(1)+" MB";
+};
+const labelDay = d => d === "*" ? "Todos os dias" : (["Domingo","Segunda-feira","Terça-feira","Quarta-feira","Quinta-feira","Sexta-feira","Sábado"][Number(d)] || d);
+const labelEvent = event => ({
+  "play-start":"Início de reprodução",
+  "play-complete":"Faixa concluída",
+  "play-interrupted":"Reprodução interrompida",
+  "play-error":"Erro de reprodução",
+  "queued":"Adicionado à fila",
+  "scheduled":"Evento agendado na fila",
+  "campaign":"Inserção de campanha na fila",
+  "system":"Sistema",
+  "media-import":"Mídia importada",
+  "media-classify":"Categoria alterada",
+  "media-delete":"Mídia removida",
+  "automation":"Automação local"
+}[event] || event);
+
+function showToast(message, error=false) {
+  const el=$("toast");
+  if(!el)return;
+  el.textContent=message;
+  el.classList.toggle("error",!!error);
+  el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>el.classList.remove("show"),3200);
+}
+function openDb() {
+  return new Promise((resolve,reject)=>{
+    if(!("indexedDB" in window)){reject(new Error("Este navegador não disponibiliza IndexedDB."));return;}
+    const req=indexedDB.open(DB_NAME,DB_VERSION);
+    req.onupgradeneeded=()=>{
+      const database=req.result;
+      if(!database.objectStoreNames.contains("media"))database.createObjectStore("media",{keyPath:"id"});
+      if(!database.objectStoreNames.contains("state"))database.createObjectStore("state",{keyPath:"key"});
+    };
+    req.onsuccess=()=>resolve(req.result);
+    req.onerror=()=>reject(req.error||new Error("Falha ao abrir armazenamento local."));
+    req.onblocked=()=>reject(new Error("O armazenamento local está bloqueado por outra aba."));
+  });
+}
+function idbRequest(req) {
+  return new Promise((resolve,reject)=>{req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error||new Error("Falha no armazenamento."));});
+}
+function dbGet(store,key) {
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction(store,"readonly");
+    const req=tx.objectStore(store).get(key);
+    req.onsuccess=()=>resolve(req.result);
+    req.onerror=()=>reject(req.error);
+  });
+}
+function dbGetAll(store) {
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction(store,"readonly");
+    const req=tx.objectStore(store).getAll();
+    req.onsuccess=()=>resolve(req.result||[]);
+    req.onerror=()=>reject(req.error);
+  });
+}
+function dbPut(store,value) {
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction(store,"readwrite");
+    tx.objectStore(store).put(value);
+    tx.oncomplete=()=>resolve(true);
+    tx.onerror=()=>reject(tx.error||new Error("Não foi possível salvar os dados."));
+    tx.onabort=()=>reject(tx.error||new Error("Gravação cancelada."));
+  });
+}
+function dbDelete(store,key) {
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction(store,"readwrite");
+    tx.objectStore(store).delete(key);
+    tx.oncomplete=()=>resolve(true);
+    tx.onerror=()=>reject(tx.error);
+  });
+}
+function dbClear(store) {
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction(store,"readwrite");
+    tx.objectStore(store).clear();
+    tx.oncomplete=()=>resolve(true);
+    tx.onerror=()=>reject(tx.error);
+  });
+}
+async function persistState() {
+  if(!db)return;
+  const payload={
+    key:APP_KEY,
+    value:{
+      queueIds:queue.map(m=>m.id),
+      schedules,campaigns,logs:logs.slice(0,500),settings,
+      segue
+    }
+  };
+  try { await dbPut("state",payload); }
+  catch(err){showToast("Não foi possível salvar localmente: "+(err.message||err),true);}
+}
+async function restoreState() {
+  const [records,saved]=await Promise.all([dbGetAll("media"),dbGet("state",APP_KEY)]);
+  media=records.map(rec=>{
+    const url=URL.createObjectURL(rec.blob);
+    urlSet.add(url);
+    return {...rec,url,file:rec.blob};
+  });
+  if(saved&&saved.value){
+    const state=saved.value;
+    schedules=Array.isArray(state.schedules)?state.schedules:[];
+    campaigns=Array.isArray(state.campaigns)?state.campaigns:[];
+    logs=Array.isArray(state.logs)?state.logs:[];
+    settings={...settings,...(state.settings||{})};
+    segue=!!state.segue;
+    queue=(Array.isArray(state.queueIds)?state.queueIds:[]).map(id=>media.find(m=>m.id===id)).filter(Boolean);
+  }
+}
+function classify(name) {
+  const n=String(name).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
+  if(/comercial|anuncio|spot|merchan|patrocin/.test(n))return "spot";
+  if(/vinheta|jingle|id.?radio|identificacao/.test(n))return "jingle";
+  if(/trilha|bed|instrumental|fundo/.test(n))return "track";
+  return "music";
+}
+function writeLog(event,message,extra={}) {
+  const entry={id:uid(),event,message:String(message||""),timestamp:now().toISOString(),...extra};
+  logs.unshift(entry);
+  if(logs.length>500)logs.length=500;
+  renderLogs();
+  renderRecentLogs();
+  renderStats();
+  persistState();
+  return entry;
+}
+function startSession(source) {
+  if(!current||activeSession)return;
+  activeSession={id:uid(),mediaId:current.id,title:current.name,type:current.type,source:source||pendingSource,startedAt:now().toISOString()};
+  writeLog("play-start","Início: "+current.name,{mediaId:current.id,title:current.name,type:current.type,source:activeSession.source,result:"em execução"});
+  $("sourceLabel").textContent="FONTE: "+String(activeSession.source||"manual").toUpperCase();
+  renderStats();
+}
+function finishSession(result) {
+  if(!activeSession)return;
+  const session=activeSession;
+  activeSession=null;
+  const seconds=Math.max(0,Number(audio.currentTime)||0);
+  const isComplete=result==="concluída";
+  writeLog(isComplete?"play-complete":result==="erro"?"play-error":"play-interrupted",
+    (isComplete?"Concluída: ":result==="erro"?"Falha: ":"Interrompida: ")+session.title,
+    {mediaId:session.mediaId,title:session.title,type:session.type,source:session.source,startedAt:session.startedAt,seconds:Number(seconds.toFixed(2)),result});
+}
+function findMedia(id){return media.find(m=>m.id===id);}
+function setStatus(text){$("status").textContent=text;}
+function drawClock(){
+  const d=now();
+  $("clock").textContent=d.toLocaleTimeString("pt-BR",{hour12:false});
+  $("dateLabel").textContent=d.toLocaleDateString("pt-BR",{weekday:"short",day:"2-digit",month:"short"}).toUpperCase();
+}
+function showView(view){
+  if(!$("view-"+view))view="console";
+  document.querySelectorAll(".view").forEach(el=>el.classList.toggle("active",el.id==="view-"+view));
+  document.querySelectorAll(".nav-item").forEach(el=>el.classList.toggle("active",el.dataset.view===view));
+  const names={console:"Console de operação",library:"Biblioteca de mídia",programming:"Programação",commercials:"Campanhas e comerciais",logs:"Prova de veiculação",diagnostics:"Diagnóstico do sistema",settings:"Configurações"};
+  $("viewTitle").textContent=names[view]||"Qolan Studio";
+  if(view==="library")drawLibrary();
+  if(view==="programming")drawSchedules();
+  if(view==="commercials")drawCampaigns();
+  if(view==="logs")renderLogs();
+  if(view==="diagnostics")refreshDiagnostics();
+  if(view==="settings")fillSettings();
+}
+function renderStation(){
+  $("sidebarStation").textContent=settings.stationName||"Emissora";
+  $("sidebarFrequency").textContent=settings.frequency||"—";
+  document.title=(settings.stationName||"Qolan Studio")+" | Qolan Studio";
+}
+function renderCurrent(){
+  $("currentTitle").textContent=current?current.name:"Nenhuma faixa selecionada";
+  $("currentMeta").textContent=current?((CATEGORY_LABELS[current.type]||current.type)+" · "+bytesLabel(current.size)+" · áudio local"):"Importe áudio ou selecione um item na biblioteca.";
+  $("statNow").textContent=current?current.name:"—";
+  $("statNowMeta").textContent=current?(CATEGORY_LABELS[current.type]||current.type):"Nenhuma faixa";
+  $("duration").textContent=fmt(current?current.duration:0);
+  $("sourceLabel").textContent="FONTE: "+(activeSession?String(activeSession.source).toUpperCase():"—");
+}
+function renderStats(){
+  $("statMedia").textContent=String(media.length);
+  $("statQueue").textContent=String(queue.length);
+  const today=localDateKey(now());
+  const plays=logs.filter(l=>l.event==="play-complete"&&localDateKey(new Date(l.timestamp))===today).length;
+  $("statPlays").textContent=String(plays);
+}
+function drawQueue(){
+  $("queueCount").textContent=queue.length+" itens";
+  $("statQueue").textContent=String(queue.length);
+  const el=$("queueList");
+  if(!queue.length){el.className="record-list empty-state";el.textContent="Adicione itens pela biblioteca.";return;}
+  el.className="record-list";
+  el.innerHTML=queue.map((m,i)=>'<div class="record-row"><span class="row-index">'+String(i+1).padStart(2,"0")+'</span><div class="record-main"><b title="'+escapeHtml(m.name)+'">'+escapeHtml(m.name)+'</b><small>'+escapeHtml(CATEGORY_LABELS[m.type]||m.type)+' · '+fmt(m.duration)+'</small></div><div class="row-actions"><button class="icon-button" data-up="'+i+'" title="Mover para cima" '+(i===0?"disabled":"")+' aria-label="Mover para cima">↑</button><button class="icon-button" data-down="'+i+'" title="Mover para baixo" '+(i===queue.length-1?"disabled":"")+' aria-label="Mover para baixo">↓</button><button class="icon-button" data-remove="'+i+'" title="Remover da fila" aria-label="Remover">×</button></div></div>').join("");
+}
+function categorySelect(m){
+  return '<select class="type-select" data-type-id="'+m.id+'" aria-label="Categoria de '+escapeHtml(m.name)+'">'+Object.keys(CATEGORY_LABELS).map(t=>'<option value="'+t+'" '+(m.type===t?"selected":"")+'>'+CATEGORY_LABELS[t]+'</option>').join("")+'</select>';
+}
+function drawLibrary(){
+  const query=($("search")?$("search").value:"").trim().toLowerCase();
+  const rows=media.filter(m=>(filter==="all"||m.type===filter)&&m.name.toLowerCase().includes(query)).sort((a,b)=>a.name.localeCompare(b.name,"pt-BR"));
+  $("libraryFoot").textContent=rows.length+" de "+media.length+" arquivos";
+  $("count");
+  const body=$("libraryList");
+  if(!rows.length){body.innerHTML='<tr><td colspan="5" class="empty-cell">'+(media.length?"Nenhum arquivo corresponde à pesquisa.":"Importe arquivos de áudio para começar.")+'</td></tr>';drawCarts();fillMediaSelects();return;}
+  body.innerHTML=rows.map(m=>'<tr><td><div class="media-title"><span class="file-glyph">♫</span><span><b title="'+escapeHtml(m.name)+'">'+escapeHtml(m.name)+'</b><small>'+bytesLabel(m.size)+' · arquivo local</small></span></div></td><td>'+categorySelect(m)+'</td><td>'+fmt(m.duration)+'</td><td>'+bytesLabel(m.size)+'</td><td><div class="row-actions"><button class="btn btn-quiet btn-small" data-media-play="'+m.id+'">▶ Tocar</button><button class="btn btn-quiet btn-small" data-media-queue="'+m.id+'">＋ Fila</button><button class="icon-button" data-media-delete="'+m.id+'" title="Excluir">×</button></div></td></tr>').join("");
+  drawCarts();
+  fillMediaSelects();
+}
+function drawCarts(){
+  const rows=media.filter(m=>(cartFilter==="all"||m.type===cartFilter)&&["jingle","spot","track"].includes(m.type));
+  const el=$("cartList");
+  if(!rows.length){el.className="cart-grid empty-state";el.textContent="Importe vinhetas, comerciais ou trilhas para montar a cartucheira.";return;}
+  el.className="cart-grid";
+  el.innerHTML=rows.map((m,i)=>'<button class="cart-button" data-type="'+m.type+'" data-cart-play="'+m.id+'" title="Disparar '+escapeHtml(m.name)+'"><b>'+escapeHtml(m.name)+'</b><small>F'+(i+1<=9?i+1:"—")+' · '+escapeHtml(CATEGORY_LABELS[m.type])+' · '+fmt(m.duration)+'</small></button>').join("");
+}
+function fillMediaSelects(){
+  const schedule=$("scheduleMedia"), campaign=$("campaignMedia");
+  if(schedule){
+    const currentValue=schedule.value;
+    schedule.innerHTML='<option value="">Selecione um áudio…</option>'+media.map(m=>'<option value="'+m.id+'">'+escapeHtml(m.name)+' · '+CATEGORY_LABELS[m.type]+'</option>').join("");
+    if(findMedia(currentValue))schedule.value=currentValue;
+  }
+  if(campaign){
+    const currentValue=campaign.value;
+    const spots=media.filter(m=>m.type==="spot");
+    campaign.innerHTML='<option value="">Selecione um comercial…</option>'+spots.map(m=>'<option value="'+m.id+'">'+escapeHtml(m.name)+'</option>').join("");
+    if(spots.some(m=>m.id===currentValue))campaign.value=currentValue;
+  }
+}
+function drawSchedules(){
+  $("scheduleCount").textContent=schedules.length+" eventos";
+  const el=$("scheduleList");
+  if(!schedules.length){el.className="record-list empty-state";el.textContent="Nenhum evento agendado.";return;}
+  el.className="record-list";
+  const rows=[...schedules].sort((a,b)=>a.time.localeCompare(b.time));
+  el.innerHTML=rows.map(s=>'<div class="event-row"><div class="event-time">'+escapeHtml(s.time)+'</div><div class="event-info"><b>'+escapeHtml(s.label)+'</b><small>'+escapeHtml((findMedia(s.mediaId)||{}).name||"Mídia não encontrada")+' · '+escapeHtml(labelDay(s.day))+'</small></div><span class="event-status '+(s.enabled?"":"inactive")+'">'+(s.enabled?"ATIVO":"PAUSADO")+'</span><div class="row-actions"><button class="icon-button" data-schedule-toggle="'+s.id+'" title="Ativar/desativar">'+(s.enabled?"Ⅱ":"▶")+'</button><button class="icon-button" data-schedule-delete="'+s.id+'" title="Excluir">×</button></div></div>').join("");
+}
+function drawCampaigns(){
+  $("campaignCount").textContent=campaigns.length+" campanhas";
+  const el=$("campaignList");
+  if(!campaigns.length){el.className="record-list empty-state";el.textContent="Nenhuma campanha cadastrada.";return;}
+  el.className="record-list";
+  el.innerHTML=[...campaigns].sort((a,b)=>a.time.localeCompare(b.time)).map(c=>'<div class="event-row"><div class="event-time">'+escapeHtml(c.time)+'</div><div class="event-info"><b>'+escapeHtml(c.name)+'</b><small>'+escapeHtml((findMedia(c.mediaId)||{}).name||"Comercial removido")+' · '+escapeHtml(c.startDate)+' a '+escapeHtml(c.endDate)+' · '+escapeHtml(labelDay(c.day))+'</small></div><span class="event-status '+(c.enabled?"":"inactive")+'">'+(c.enabled?"ATIVA":"PAUSADA")+'</span><div class="row-actions"><button class="icon-button" data-campaign-toggle="'+c.id+'" title="Ativar/desativar">'+(c.enabled?"Ⅱ":"▶")+'</button><button class="icon-button" data-campaign-delete="'+c.id+'" title="Excluir">×</button></div></div>').join("");
+}
+function renderRecentLogs(){
+  const el=$("recentLogs");
+  const recent=logs.slice(0,7);
+  if(!recent.length){el.className="record-list empty-state";el.textContent="Ainda não há eventos registrados.";return;}
+  el.className="record-list";
+  el.innerHTML=recent.map(l=>'<div class="record-row"><span class="row-index">'+escapeHtml(l.timestamp?new Date(l.timestamp).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"}):"—")+'</span><div class="record-main"><b>'+escapeHtml(l.message)+'</b><small>'+escapeHtml(labelEvent(l.event))+' · '+escapeHtml(l.title||"")+'</small></div></div>').join("");
+}
+function renderLogs(){
+  const el=$("logTable");
+  $("logCount").textContent=logs.length+" registros";
+  if(!logs.length){el.innerHTML='<tr><td colspan="5" class="empty-cell">Nenhum registro.</td></tr>';return;}
+  el.innerHTML=logs.slice(0,300).map(l=>{
+    const date=l.timestamp?new Date(l.timestamp).toLocaleString("pt-BR"):"—";
+    const duration=Number.isFinite(Number(l.seconds))?fmt(l.seconds):"—";
+    const result=l.result||"registrado";
+    return '<tr><td>'+escapeHtml(date)+'</td><td>'+escapeHtml(labelEvent(l.event))+'</td><td>'+escapeHtml(l.title||l.message||"—")+'</td><td>'+duration+'</td><td><span class="category-tag">'+escapeHtml(result)+'</span></td></tr>';
+  }).join("");
+}
+function renderEverything(){
+  renderStation();renderCurrent();drawLibrary();drawQueue();drawSchedules();drawCampaigns();renderLogs();renderRecentLogs();renderStats();
+  $("segueBtn").textContent="SEGUE: "+(segue?"ON":"OFF");
+}
+function addQueue(m,source="manual"){
+  if(!m)return;
+  queue.push(m);
+  writeLog("queued","Fila + "+m.name,{mediaId:m.id,title:m.name,type:m.type,source,result:"na fila"});
+  drawQueue();renderStats();persistState();
+}
+function chooseRotation(){
+  const music=media.filter(m=>m.type==="music");
+  if(!music.length)return null;
+  const recentIds=new Set(logs.filter(l=>l.event==="play-complete"&&l.mediaId).slice(0,10).map(l=>l.mediaId));
+  const candidates=music.filter(m=>!recentIds.has(m.id));
+  const pool=candidates.length?candidates:music;
+  return pool[Math.floor(Math.random()*pool.length)];
+}
+function play(m,source="manual"){
+  if(!m)return;
+  if(activeSession)finishSession("interrompida");
+  audio.pause();
+  audio.volume=1;
+  current=m;
+  pendingSource=source;
+  audio.src=m.url;
+  audio.load();
+  renderCurrent();
+  $("playState").textContent="CARREGANDO";
+  $("playBtn").textContent="Ⅱ";
+  setStatus("CARREGANDO ÁUDIO");
+  audio.play().then(()=>{
+    $("playState").textContent="REPRODUZINDO";
+    setStatus("REPRODUZINDO");
+    initializeMeter();
+  }).catch(err=>{
+    $("playState").textContent="ERRO";
+    $("playBtn").textContent="▶";
+    setStatus("ERRO DE ÁUDIO");
+    writeLog("play-error","Falha ao reproduzir "+m.name,{mediaId:m.id,title:m.name,type:m.type,source,result:err.name||"erro"});
+    showToast("Não foi possível reproduzir este arquivo. Clique novamente após verificar o formato.",true);
+  });
+}
+function next(){
+  clearInterval(fadeTimer);
+  audio.volume=1;
+  if(queue.length){
+    const m=queue.shift();
+    persistState();drawQueue();
+    play(m,"fila");
+  }else if(auto){
+    const m=chooseRotation();
+    if(m)play(m,"rotação local sem repetir as últimas 10 faixas");
+    else stopPlayback("Fila vazia; nenhuma música na biblioteca.");
+  }else{
+    stopPlayback("Fim da sequência.");
+  }
+}
+function stopPlayback(reason="Parada manual."){
+  clearInterval(fadeTimer);
+  if(activeSession)finishSession("interrompida");
+  audio.pause();
+  audio.currentTime=0;
+  audio.volume=1;
+  $("playBtn").textContent="▶";
+  $("playState").textContent="PARADO";
+  setStatus("SISTEMA PRONTO");
+  $("audioContextState").textContent=audioContext?"MOTOR DE ANÁLISE ATIVO":"ÁUDIO AGUARDANDO";
+  showToast(reason);
+}
+function togglePlay(){
+  if(!current){
+    if(queue.length){next();return;}
+    if(media.length){play(media[0],"biblioteca");return;}
+    showToast("Importe um arquivo de áudio primeiro.",true);return;
+  }
+  if(audio.paused){
+    audio.play().then(()=>{$("playBtn").textContent="Ⅱ";$("playState").textContent="REPRODUZINDO";setStatus("REPRODUZINDO");}).catch(()=>showToast("O navegador bloqueou a reprodução. Clique novamente.",true));
+  }else{
+    audio.pause();$("playBtn").textContent="▶";$("playState").textContent="PAUSADO";setStatus("PAUSADO");
+  }
+}
+function fadeNext(){
+  if(audio.paused||!current){showToast("Não há áudio tocando para fazer fade.",true);return;}
+  clearInterval(fadeTimer);
+  const start=audio.volume,steps=25;
+  let step=0;
+  $("fadeBtn").disabled=true;
+  fadeTimer=setInterval(()=>{
+    step++;
+    audio.volume=Math.max(0,start*(1-step/steps));
+    if(step>=steps){
+      clearInterval(fadeTimer);fadeTimer=null;audio.volume=1;$("fadeBtn").disabled=false;
+      if(activeSession)finishSession("fade-out");
+      next();
+    }
+  },100);
+  showToast("Fade-out de 2,5 segundos iniciado.");
+}
+async function initializeMeter(){
+  try{
+    if(!window.AudioContext&&!window.webkitAudioContext){$("audioContextState").textContent="ANÁLISE INDISPONÍVEL";return;}
+    if(!audioContext){
+      const Context=window.AudioContext||window.webkitAudioContext;
+      audioContext=new Context();
+      mediaSource=audioContext.createMediaElementSource(audio);
+      splitter=audioContext.createChannelSplitter(2);
+      mediaSource.connect(audioContext.destination);
+      mediaSource.connect(splitter);
+      analyzers=[0,1].map(()=>{const a=audioContext.createAnalyser();a.fftSize=1024;return a;});
+      meterNodes=[0,1].map(()=>audioContext.createGain());
+      meterNodes.forEach(n=>n.gain.value=0);
+      analyzers.forEach((a,i)=>{splitter.connect(a,i);a.connect(meterNodes[i]);meterNodes[i].connect(audioContext.destination);});
+    }
+    await audioContext.resume();
+    $("audioContextState").textContent="RMS L/R ATIVO";
+    if(meterTimer)clearInterval(meterTimer);
+    const buffers=analyzers.map(()=>new Float32Array(1024));
+    meterTimer=setInterval(()=>{
+      if(!analyzers.length)return;
+      analyzers.forEach((a,i)=>{
+        a.getFloatTimeDomainData(buffers[i]);
+        let sum=0;for(let j=0;j<buffers[i].length;j++)sum+=buffers[i][j]*buffers[i][j];
+        const rms=Math.sqrt(sum/buffers[i].length);
+        const db=rms>0?20*Math.log10(rms):-60;
+        const pct=Math.max(0,Math.min(100,((db+60)/60)*100));
+        $(i===0?"leftMeter":"rightMeter").style.width=pct+"%";
+        $(i===0?"leftDb":"rightDb").textContent=(db<=-59.5?"−∞":db.toFixed(1))+" dB";
+      });
+    },90);
+  }catch(err){
+    $("audioContextState").textContent="ANÁLISE INDISPONÍVEL";
+    writeLog("system","Análise de áudio indisponível: "+(err.message||"erro"));
+  }
+}
+function refreshMode(){
+  $("modeLabel").textContent=auto?"AUTOMAÇÃO LOCAL":"MANUAL";
+  $("modeDot").parentElement.classList.toggle("on",auto);
+  $("autoBtn").textContent=auto?"Ⅱ Desativar automação":"▶ Ativar automação local";
+  $("diagMode").textContent=auto?"Ativa nesta aba":"Manual";
+}
+async function importFiles(files){
+  let imported=0;
+  for(const file of Array.from(files||[])){
+    if(!file.type.startsWith("audio/")&&!/\.(mp3|wav|ogg|flac|m4a|aac|opus|wma)$/i.test(file.name)){
+      showToast("Arquivo ignorado: "+file.name+" não parece ser áudio.",true);continue;
+    }
+    const id=uid(),url=URL.createObjectURL(file);urlSet.add(url);
+    const duration=await new Promise(resolve=>{
+      const probe=new Audio();probe.preload="metadata";
+      const done=()=>{const d=Number.isFinite(probe.duration)?probe.duration:0;probe.removeAttribute("src");probe.load();resolve(d);};
+      probe.onloadedmetadata=done;probe.onerror=()=>resolve(0);probe.src=url;
+    });
+    const type=classify(file.name);
+    const m={id,name:file.name,type,url,file,blob:file,duration,size:file.size,lastModified:file.lastModified};
+    try{
+      await dbPut("media",{id,name:file.name,type,duration,size:file.size,lastModified:file.lastModified,blob:file});
+      media.push(m);imported++;
+      writeLog("media-import","Importado: "+m.name,{mediaId:m.id,title:m.name,type:m.type,result:"armazenado no navegador"});
+    }catch(err){
+      URL.revokeObjectURL(url);urlSet.delete(url);
+      showToast("Falha ao armazenar "+file.name+". Verifique o espaço disponível no navegador.",true);
+    }
+  }
+  drawLibrary();drawQueue();renderStats();persistState();
+  if(imported)showToast(imported+" arquivo(s) importado(s) e armazenado(s) neste navegador.");
+}
+async function updateMediaType(id,type){
+  const m=findMedia(id);if(!m||!CATEGORY_LABELS[type])return;
+  m.type=type;
+  try{
+    await dbPut("media",{id:m.id,name:m.name,type:m.type,duration:m.duration,size:m.size,lastModified:m.lastModified,blob:m.blob||m.file});
+    writeLog("media-classify","Categoria: "+m.name+" → "+CATEGORY_LABELS[type],{mediaId:m.id,title:m.name,type,result:"alterada"});
+    drawLibrary();drawQueue();drawSchedules();drawCampaigns();
+  }catch(err){showToast("Não foi possível salvar a categoria: "+err.message,true);}
+}
+async function removeMedia(id){
+  const m=findMedia(id);if(!m)return;
+  if(!window.confirm("Remover "+m.name+" do armazenamento local?"))return;
+  if(current&&current.id===id)stopPlayback("Faixa removida.");
+  media=media.filter(x=>x.id!==id);queue=queue.filter(x=>x.id!==id);
+  schedules=schedules.filter(x=>x.mediaId!==id);campaigns=campaigns.filter(x=>x.mediaId!==id);
+  try{await dbDelete("media",id);}catch(_){}
+  if(urlSet.has(m.url)){URL.revokeObjectURL(m.url);urlSet.delete(m.url);}
+  writeLog("media-delete","Removido: "+m.name,{mediaId:id,title:m.name,type:m.type,result:"removido localmente"});
+  drawLibrary();drawQueue();drawSchedules();drawCampaigns();persistState();
+}
+function scheduleTick(){
+  if(!auto||!db)return;
+  const d=now(),tk=timeKey(d),dk=localDateKey(d),minute=dk+" "+tk;
+  if(minute===lastSchedulerMinute)return;
+  lastSchedulerMinute=minute;
+  let changed=false;
+  for(const item of schedules.filter(s=>s.enabled&&s.time===tk&&(s.day==="*"||Number(s.day)===d.getDay()))){
+    const key=dk+"@"+tk;
+    if(item.lastFiredAt===key)continue;
+    item.lastFiredAt=key;
+    const m=findMedia(item.mediaId);
+    if(m){queue.unshift(m);writeLog("scheduled","Evento na fila: "+item.label,{mediaId:m.id,title:m.name,type:m.type,source:"agenda local",result:"inserido na fila"});changed=true;}
+  }
+  for(const c of campaigns.filter(x=>x.enabled&&x.time===tk&&(x.day==="*"||Number(x.day)===d.getDay())&&dk>=x.startDate&&dk<=x.endDate)){
+    const key=dk+"@"+tk;
+    if(c.lastFiredAt===key)continue;
+    c.lastFiredAt=key;
+    const m=findMedia(c.mediaId);
+    if(m){queue.unshift(m);writeLog("campaign","Campanha na fila: "+c.name,{mediaId:m.id,title:m.name,type:m.type,source:"campanha local",result:"inserido na fila"});changed=true;}
+  }
+  if(changed){
+    drawQueue();drawSchedules();drawCampaigns();persistState();
+    if(audio.paused&&queue.length)next();
+    else showToast("Evento de programação adicionado à fila. A execução aguardará o item atual terminar.");
+  }
+}
+function updateProgress(){
+  const duration=Number(audio.duration)||0;
+  $("elapsed").textContent=fmt(audio.currentTime||0);
+  $("duration").textContent=fmt(duration);
+  $("progress").style.width=duration?Math.min(100,(audio.currentTime/duration)*100)+"%":"0%";
+}
+async function refreshDiagnostics(){
+  try{
+    const resp=await fetch("/health",{cache:"no-store"});
+    const data=await resp.json();
+    $("diagServer").textContent=resp.ok?"Online":"Erro HTTP";
+    $("diagServerDetail").textContent=(data.product||"Qolan Studio")+" · v"+(data.version||"?")+" · /health";
+    $("health").textContent=resp.ok?"SERVIÇO WEB ONLINE":"SERVIÇO COM ERRO";
+    $("health").style.color=resp.ok?"var(--green)":"var(--red)";
+  }catch(_){
+    $("diagServer").textContent="Indisponível";$("diagServerDetail").textContent="Não foi possível consultar /health";$("health").textContent="SERVIDOR NÃO VERIFICADO";
+  }
+  $("diagStorage").textContent=db?"IndexedDB ativo":"Indisponível";
+  $("diagStorageDetail").textContent=media.length+" arquivos · "+queue.length+" na fila";
+  $("diagAudio").textContent=audioContext?(audioContext.state==="running"?"Ativo":"Suspenso"):"Aguardando";
+  $("diagAudioDetail").textContent=window.AudioContext?"Web Audio API":"Não suportado";
+  $("diagMode").textContent=auto?"Ativa nesta aba":"Manual";
+  if(navigator.storage&&navigator.storage.estimate){
+    try{const e=await navigator.storage.estimate();$("storageFooter").textContent="Armazenamento estimado: "+bytesLabel(e.usage||0)+" de "+bytesLabel(e.quota||0);$("diagStorageDetail").textContent=media.length+" arquivos · "+bytesLabel(e.usage||0)+" usados";}
+    catch(_){$("storageFooter").textContent="Dados salvos neste navegador";}
+  }else $("storageFooter").textContent="Dados salvos neste navegador";
+}
+function fillSettings(){
+  $("stationNameInput").value=settings.stationName||"";
+  $("stationFrequencyInput").value=settings.frequency||"";
+  $("timezoneInput").value=settings.timezone||"America/Sao_Paulo";
+}
+function csvEscape(v){return '"'+String(v==null?"":v).replace(/"/g,'""')+'"';}
+function download(name,content,type){
+  const url=URL.createObjectURL(new Blob([content],{type}));
+  const a=document.createElement("a");a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+async function exportBackup(){
+  const payload={product:"Qolan Studio",schemaVersion:1,exportedAt:now().toISOString(),settings,schedules,campaigns,queueIds:queue.map(m=>m.id),logs};
+  download("qolan-studio-backup-"+localDateKey(now())+".json",JSON.stringify(payload,null,2),"application/json");
+  showToast("Backup de configurações e registros exportado. Os arquivos de áudio não estão incluídos.");
+}
+async function restoreBackup(file){
+  try{
+    const payload=JSON.parse(await file.text());
+    if(payload.product!=="Qolan Studio"||payload.schemaVersion!==1)throw new Error("Este arquivo não é um backup compatível do Qolan Studio.");
+    if(payload.settings&&typeof payload.settings==="object")settings={...settings,...payload.settings};
+    if(Array.isArray(payload.schedules))schedules=payload.schedules.filter(s=>s&&typeof s==="object"&&typeof s.time==="string"&&typeof s.mediaId==="string");
+    if(Array.isArray(payload.campaigns))campaigns=payload.campaigns.filter(c=>c&&typeof c==="object"&&typeof c.time==="string"&&typeof c.mediaId==="string");
+    if(Array.isArray(payload.logs))logs=payload.logs.slice(0,500);
+    queue=(Array.isArray(payload.queueIds)?payload.queueIds:[]).map(findMedia).filter(Boolean);
+    await persistState();renderEverything();fillSettings();showToast("Backup importado. Reimporte os arquivos que não estiverem na biblioteca local.");
+  }catch(err){showToast("Não foi possível importar o backup: "+err.message,true);}
+}
+async function deleteAllMedia(){
+  if(!window.confirm("Isto remove todos os áudios armazenados neste navegador e seus agendamentos/campanhas. Continuar?"))return;
+  stopPlayback("Biblioteca removida.");
+  for(const url of urlSet)URL.revokeObjectURL(url);
+  urlSet.clear();media=[];queue=[];schedules=[];campaigns=[];
+  await dbClear("media");await persistState();renderEverything();
+  writeLog("system","Biblioteca local removida",{result:"ação manual"});
+  showToast("Biblioteca local removida.");
+}
+function bindEvents(){
+  document.querySelectorAll(".nav-item").forEach(b=>b.addEventListener("click",()=>showView(b.dataset.view)));
+  document.addEventListener("click",e=>{
+    const goto=e.target.closest("[data-go]");if(goto)showView(goto.dataset.go);
+    const playBtn=e.target.closest("[data-media-play],[data-cart-play]");
+    if(playBtn){const id=playBtn.dataset.mediaPlay||playBtn.dataset.cartPlay;const m=findMedia(id);if(m)play(m,playBtn.dataset.cartPlay?"cartucheira":"biblioteca");}
+    const queued=e.target.closest("[data-media-queue]");
+    if(queued)addQueue(findMedia(queued.dataset.mediaQueue));
+    const remove=e.target.closest("[data-remove]");
+    if(remove){queue.splice(Number(remove.dataset.remove),1);drawQueue();persistState();}
+    const up=e.target.closest("[data-up]");
+    if(up){const i=Number(up.dataset.up);if(i>0){[queue[i-1],queue[i]]=[queue[i],queue[i-1]];drawQueue();persistState();}}
+    const down=e.target.closest("[data-down]");
+    if(down){const i=Number(down.dataset.down);if(i<queue.length-1){[queue[i+1],queue[i]]=[queue[i],queue[i+1]];drawQueue();persistState();}}
+    const schedToggle=e.target.closest("[data-schedule-toggle]");
+    if(schedToggle){const s=schedules.find(x=>x.id===schedToggle.dataset.scheduleToggle);if(s){s.enabled=!s.enabled;drawSchedules();persistState();}}
+    const schedDelete=e.target.closest("[data-schedule-delete]");
+    if(schedDelete){schedules=schedules.filter(s=>s.id!==schedDelete.dataset.scheduleDelete);drawSchedules();persistState();}
+    const campToggle=e.target.closest("[data-campaign-toggle]");
+    if(campToggle){const c=campaigns.find(x=>x.id===campToggle.dataset.campaignToggle);if(c){c.enabled=!c.enabled;drawCampaigns();persistState();}}
+    const campDelete=e.target.closest("[data-campaign-delete]");
+    if(campDelete){campaigns=campaigns.filter(c=>c.id!==campDelete.dataset.campaignDelete);drawCampaigns();persistState();}
+    const mediaDelete=e.target.closest("[data-media-delete]");
+    if(mediaDelete)removeMedia(mediaDelete.dataset.mediaDelete);
+  });
+  $("importBtn").addEventListener("click",()=>$("fileInput").click());
+  $("importBtnLibrary").addEventListener("click",()=>$("fileInput").click());
+  $("fileInput").addEventListener("change",async e=>{await importFiles(e.target.files);e.target.value="";});
+  $("search").addEventListener("input",drawLibrary);
+  document.querySelectorAll("[data-filter]").forEach(b=>b.addEventListener("click",()=>{
+    filter=b.dataset.filter;document.querySelectorAll("[data-filter]").forEach(x=>x.classList.toggle("active",x===b));drawLibrary();
+  }));
+  document.querySelectorAll("[data-cart-filter]").forEach(b=>b.addEventListener("click",()=>{
+    cartFilter=b.dataset.cartFilter;document.querySelectorAll("[data-cart-filter]").forEach(x=>x.classList.toggle("active",x===b));drawCarts();
+  }));
+  $("libraryList").addEventListener("change",e=>{
+    const sel=e.target.closest("[data-type-id]");if(sel)updateMediaType(sel.dataset.typeId,sel.value);
+  });
+  $("playBtn").addEventListener("click",togglePlay);
+  $("stopBtn").addEventListener("click",()=>stopPlayback("Reprodução parada."));
+  $("nextBtn").addEventListener("click",next);
+  $("prevBtn").addEventListener("click",()=>{if(current){audio.currentTime=0;if(audio.paused)togglePlay();}});
+  $("fadeBtn").addEventListener("click",fadeNext);
+  $("segueBtn").addEventListener("click",()=>{segue=!segue;$("segueBtn").textContent="SEGUE: "+(segue?"ON":"OFF");writeLog("system","Segue "+(segue?"ativado":"desativado"),{result:segue?"on":"off"});persistState();});
+  $("autoBtn").addEventListener("click",()=>{
+    auto=!auto;refreshMode();
+    writeLog("automation","Automação local "+(auto?"ativada":"desativada"),{result:auto?"on":"off"});
+    showToast(auto?"Automação local ligada. Mantenha esta aba aberta e o áudio permitido.":"Automação local desligada.");
+    if(auto&&audio.paused&&queue.length)next();
+  });
+  $("clearQueue").addEventListener("click",()=>{queue=[];drawQueue();persistState();writeLog("system","Fila limpa",{result:"fila vazia"});});
+  $("saveQueueBtn").addEventListener("click",async()=>{await persistState();showToast("Fila salva neste navegador.");});
+  $("scheduleForm").addEventListener("submit",async e=>{
+    e.preventDefault();
+    const mediaId=$("scheduleMedia").value, m=findMedia(mediaId),time=$("scheduleTime").value,label=$("scheduleLabel").value.trim();
+    if(!m||!time||!label){showToast("Preencha o nome, áudio e horário.",true);return;}
+    schedules.push({id:uid(),label,mediaId,time,day:$("scheduleDay").value,enabled:true,lastFiredAt:null});
+    await persistState();drawSchedules();e.target.reset();$("scheduleTime").value="09:00";fillMediaSelects();showToast("Evento adicionado à programação local.");writeLog("system","Agendamento criado: "+label,{title:m.name,result:"ativo"});
+  });
+  $("campaignForm").addEventListener("submit",async e=>{
+    e.preventDefault();
+    const name=$("campaignName").value.trim(),mediaId=$("campaignMedia").value,m=findMedia(mediaId),startDate=$("campaignStart").value,endDate=$("campaignEnd").value,time=$("campaignTime").value,day=$("campaignDay").value;
+    if(!name||!m||!startDate||!endDate||!time||endDate<startDate){showToast("Revise os dados e as datas da campanha.",true);return;}
+    campaigns.push({id:uid(),name,mediaId,startDate,endDate,time,day,enabled:true,lastFiredAt:null});
+    await persistState();drawCampaigns();e.target.reset();$("campaignTime").value="12:00";fillMediaSelects();showToast("Campanha local cadastrada.");writeLog("system","Campanha criada: "+name,{title:m.name,result:"ativa"});
+  });
+  $("settingsForm").addEventListener("submit",async e=>{
+    e.preventDefault();settings={stationName:$("stationNameInput").value.trim()||"Emissora",frequency:$("stationFrequencyInput").value.trim(),timezone:$("timezoneInput").value};
+    await persistState();renderStation();showToast("Configurações da emissora salvas neste navegador.");writeLog("system","Configurações da emissora alteradas",{result:"salvas"});
+  });
+  $("settingsShortcut").addEventListener("click",()=>showView("settings"));
+  $("exportCsv").addEventListener("click",()=>{
+    const rows=[["timestamp","event","title","category","source","seconds","result"],...logs.map(l=>[l.timestamp,labelEvent(l.event),l.title||l.message,l.type||"",l.source||"",l.seconds==null?"":l.seconds,l.result||""])];
+    download("qolan-studio-playout-log-"+localDateKey(now())+".csv","\uFEFF"+rows.map(row=>row.map(csvEscape).join(";")).join("\r\n"),"text/csv;charset=utf-8");
+  });
+  $("exportJson").addEventListener("click",()=>download("qolan-studio-playout-log.json",JSON.stringify({product:"Qolan Studio",exportedAt:now().toISOString(),logs},null,2),"application/json"));
+  $("clearLogs").addEventListener("click",async()=>{if(!window.confirm("Apagar todos os registros locais de veiculação?"))return;logs=[];await persistState();renderLogs();renderRecentLogs();renderStats();showToast("Histórico local apagado.");});
+  $("refreshDiagnostics").addEventListener("click",refreshDiagnostics);
+  $("backupBtn").addEventListener("click",exportBackup);
+  $("restoreBtn").addEventListener("click",()=>$("restoreInput").click());
+  $("restoreInput").addEventListener("change",async e=>{const file=e.target.files&&e.target.files[0];if(file)await restoreBackup(file);e.target.value="";});
+  $("clearMediaBtn").addEventListener("click",deleteAllMedia);
+  document.addEventListener("keydown",e=>{
+    if(e.ctrlKey&&e.key.toLowerCase()==="i"){e.preventDefault();$("fileInput").click();return;}
+    if(["INPUT","TEXTAREA","SELECT"].includes(document.activeElement.tagName))return;
+    if(e.key===" "){e.preventDefault();togglePlay();return;}
+    if(e.key==="F10"){e.preventDefault();showView("console");return;}
+    if(/^F[1-9]$/.test(e.key)){
+      e.preventDefault();const index=Number(e.key.slice(1))-1;
+      const carts=media.filter(m=>(cartFilter==="all"||m.type===cartFilter)&&["jingle","spot","track"].includes(m.type)).sort((a,b)=>a.name.localeCompare(b.name,"pt-BR"));
+      if(carts[index])play(carts[index],"cartucheira "+e.key);
+    }
+  });
+  audio.addEventListener("play",()=>{if(!activeSession)startSession(pendingSource);$("playState").textContent="REPRODUZINDO";$("playBtn").textContent="Ⅱ";setStatus("REPRODUZINDO");initializeMeter();});
+  audio.addEventListener("pause",()=>{if(audio.ended)return;if(!audio.currentSrc)return;if($("playState").textContent==="REPRODUZINDO")$("playState").textContent="PAUSADO";});
+  audio.addEventListener("ended",()=>{
+    finishSession("concluída");$("playBtn").textContent="▶";
+    if(queue.length&&(auto||segue))next();
+    else if(auto)next();
+    else{$("playState").textContent="FIM DA FAIXA";setStatus("SISTEMA PRONTO");}
+  });
+  audio.addEventListener("timeupdate",updateProgress);
+  audio.addEventListener("error",()=>{
+    if(!current)return;
+    if(activeSession)finishSession("erro");
+    else writeLog("play-error","Erro ao carregar: "+current.name,{mediaId:current.id,title:current.name,result:"erro"});
+    $("playState").textContent="ERRO";setStatus("ERRO DE ÁUDIO");
+    if(queue.length&&auto)next();
+  });
+}
+async function init(){
+  bindEvents();
+  drawClock();setInterval(drawClock,1000);
+  setInterval(scheduleTick,1000);
+  refreshMode();
+  try{
+    db=await openDb();await restoreState();
+    $("storageFooter").textContent="IndexedDB: ativo · "+media.length+" arquivos";
+  }catch(err){
+    $("storageFooter").textContent="Armazenamento local indisponível";
+    $("diagStorage").textContent="Indisponível";
+    showToast("O navegador não permitiu abrir a biblioteca persistente: "+err.message,true);
+  }
+  renderEverything();fillSettings();fillMediaSelects();
+  const today=localDateKey(now());
+  $("campaignStart").value=today;$("campaignEnd").value=today;
+  await refreshDiagnostics();
+  writeLog("system","Console Qolan Studio iniciado",{result:"pronto"});
+}
+window.addEventListener("beforeunload",()=>{
+  clearInterval(meterTimer);clearInterval(fadeTimer);
+  for(const url of urlSet)URL.revokeObjectURL(url);
+});
+init();
 })();

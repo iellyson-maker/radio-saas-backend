@@ -56,9 +56,10 @@
   const defaults={stationName:"Rádio Central",frequency:"98.7 FM",timezone:"America/Sao_Paulo"};
   const raw=isObject(payload.settings)?payload.settings:{};
   const settings={stationName:cleanString(raw.stationName,100,defaults.stationName)||defaults.stationName,frequency:cleanString(raw.frequency,50,defaults.frequency),timezone:isValidTimeZone(raw.timezone)?raw.timezone:defaults.timezone};
-  for(const key of ["schedules","campaigns","logs","queueIds"])if(payload[key]!==undefined&&!Array.isArray(payload[key]))throw new Error("Campo inválido no backup: "+key+".");
-  const ss=payload.schedules||[],cc=payload.campaigns||[],ll=payload.logs||[],qq=payload.queueIds||[];
-  if(ss.length>500||cc.length>500||ll.length>500||qq.length>2000)throw new Error("O backup excede o limite de registros permitido.");
+  for(const key of ["schedules","campaigns","logs","queueIds","cartSlots"])if(payload[key]!==undefined&&!Array.isArray(payload[key]))throw new Error("Campo inválido no backup: "+key+".");
+  if(payload.jingleRotation!==undefined&&!isObject(payload.jingleRotation))throw new Error("Campo inválido no backup: jingleRotation.");
+  const ss=payload.schedules||[],cc=payload.campaigns||[],ll=payload.logs||[],qq=payload.queueIds||[],cs=payload.cartSlots||[];
+  if(ss.length>500||cc.length>500||ll.length>500||qq.length>2000||cs.length>24)throw new Error("O backup excede o limite de registros permitido.");
   const schedules=[];
   for(const s of ss){
    if(!isObject(s))continue;
@@ -82,7 +83,15 @@
   }).filter(Boolean).slice(0,500);
   const known=new Set(Array.from(availableMediaIds||[]).filter(x=>typeof x==="string"));
   const queueIds=qq.filter(x=>typeof x==="string"&&known.has(x)).slice(0,2000);
-  return {settings,schedules,campaigns,logs,queueIds};
+  const cartSlots=normalizeCartSlots(cs,12).map(id=>typeof id==="string"&&known.has(id)?id:null);
+  const rotation=isObject(payload.jingleRotation)?payload.jingleRotation:{};
+  const jingleRotation={
+    enabled:rotation.enabled===true,
+    every:Math.max(2,Math.min(12,Math.floor(Number(rotation.every)||3))),
+    counter:Math.max(0,Math.min(1000,Math.floor(Number(rotation.counter)||0))),
+    index:Math.max(0,Math.min(100000,Math.floor(Number(rotation.index)||0)))
+  };
+  return {settings,schedules,campaigns,logs,queueIds,cartSlots,jingleRotation};
  }
  function normalizeCartSlots(slots=[],size=12){
   const result=Array.from({length:Math.max(1,Math.min(24,Number(size)||12))},(_,i)=>typeof slots[i]==="string"?slots[i]:null);

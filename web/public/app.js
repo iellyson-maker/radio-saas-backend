@@ -611,7 +611,7 @@ function play(m,source="manual"){
 }
 function next(){
   clearInterval(fadeTimer);
-  mainAudio.volume=currentCart?(cartDuckApplied?Math.min(mainVolumeBeforeCart,0.30):1):1;
+  applyAudioVolumes();
   if(queue.length){
     const m=queue.shift();
     persistState();drawQueue();
@@ -629,7 +629,7 @@ function stopPlayback(reason="Parada manual."){
   if(activeSession)finishSession("interrompida");
   mainAudio.pause();
   mainAudio.currentTime=0;
-  mainAudio.volume=1;
+  applyAudioVolumes();
   $("playBtn").textContent="▶";
   setPlayState("PARADO");
   setStatus("SISTEMA PRONTO");
@@ -658,7 +658,7 @@ function fadeNext(){
     step++;
     mainAudio.volume=Math.max(0,start*(1-step/steps));
     if(step>=steps){
-      clearInterval(fadeTimer);fadeTimer=null;mainAudio.volume=currentCart?(cartDuckApplied?Math.min(mainVolumeBeforeCart,0.30):1):1;$("fadeBtn").disabled=false;
+      clearInterval(fadeTimer);fadeTimer=null;applyAudioVolumes();$("fadeBtn").disabled=false;
       if(activeSession)finishSession("fade-out");
       next();
     }
@@ -761,6 +761,7 @@ async function removeMedia(id){
   if(!window.confirm("Remover "+m.name+" do armazenamento local?"))return;
   if(currentCart&&currentCart.id===id)stopCartPlayback(true);
   if(current&&current.id===id){stopPlayback("Faixa removida.");current=null;}
+  if(previewCurrent&&previewCurrent.id===id)loadPreviewMedia(null);
   media=media.filter(x=>x.id!==id);queue=queue.filter(x=>x.id!==id);
   schedules=schedules.filter(x=>x.mediaId!==id);campaigns=campaigns.filter(x=>x.mediaId!==id);
   cartSlots=cartSlots.map(slotId=>slotId===id?null:slotId);
@@ -815,6 +816,7 @@ function fillSettings(){
   $("stationNameInput").value=settings.stationName||"";
   $("stationFrequencyInput").value=settings.frequency||"";
   $("timezoneInput").value=settings.timezone||"America/Sao_Paulo";
+  fillAudioSettingsUI();
 }
 function csvEscape(v){return '"'+String(v==null?"":v).replace(/"/g,'""')+'"';}
 function download(name,content,type){
@@ -843,7 +845,7 @@ async function restoreBackup(file){
 }
 async function deleteAllMedia(){
   if(!window.confirm("Isto remove todos os áudios armazenados neste navegador e seus agendamentos/campanhas. Continuar?"))return;
-  stopPlayback("Biblioteca removida.");
+  stopPlayback("Biblioteca removida.");stopPreview();loadPreviewMedia(null);
   if(currentCart)stopCartPlayback(true);
   current=null;
   for(const url of urlSet)URL.revokeObjectURL(url);
@@ -858,7 +860,7 @@ function setCartStatus(text,active=false){
   if($("stopCartBtn"))$("stopCartBtn").disabled=!active;
 }
 function restoreMainVolume(){
-  if(cartDuckApplied){mainAudio.volume=mainVolumeBeforeCart;cartDuckApplied=false;}
+  cartDuckApplied=false;applyAudioVolumes();
   setCartStatus("SEM DISPARO",false);
   if($("cartDuckingLabel"))$("cartDuckingLabel").textContent="Áudio de apoio";
 }
@@ -1024,6 +1026,28 @@ function bindEvents(){
     jingleRotation.every=Math.max(2,Math.min(12,Number(e.target.value)||3));refreshJingleRotationUI();await persistState();
     showToast("Vinheta automática configurada a cada "+jingleRotation.every+" músicas.");
   });
+  $("previewMediaSelect").addEventListener("change",()=>loadPreviewMedia(findMedia($("previewMediaSelect").value)));
+  $("previewPlayBtn").addEventListener("click",togglePreview);
+  $("previewStopBtn").addEventListener("click",stopPreview);
+  previewAudio.addEventListener("timeupdate",updatePreviewProgress);
+  previewAudio.addEventListener("loadedmetadata",updatePreviewProgress);
+  previewAudio.addEventListener("play",()=>{$("previewState").textContent="OUVINDO";$("previewState").classList.add("playing");$("previewPlayBtn").textContent="Ⅱ Pausar pré-escuta";});
+  previewAudio.addEventListener("pause",()=>{
+    $("previewState").classList.remove("playing");
+    if(previewCurrent&&previewAudio.currentTime>0.01){$("previewState").textContent="PAUSADO";$("previewPlayBtn").textContent="▶ Continuar pré-escuta";}
+    else{$("previewState").textContent=previewCurrent?"PRONTO":"PARADO";$("previewPlayBtn").textContent="▶ Iniciar pré-escuta";}
+  });
+  previewAudio.addEventListener("ended",()=>{$("previewState").textContent="FIM DA FAIXA";$("previewState").classList.remove("playing");$("previewPlayBtn").textContent="▶ Ouvir novamente";updatePreviewProgress();});
+  previewAudio.addEventListener("error",()=>{if(previewCurrent)showToast("Não foi possível carregar a faixa de pré-escuta.",true);});
+  $("refreshAudioDevices").addEventListener("click",()=>refreshAudioDevices(false));
+  $("chooseAudioOutput").addEventListener("click",chooseAudioOutput);
+  for(const [id,key] of [["mainVolumeSlider","mainVolume"],["cartVolumeSlider","cartVolume"],["previewVolumeSlider","previewVolume"]]){
+    $(id).addEventListener("input",()=>{settings[key]=Number($(id).value);applyAudioVolumes();});
+    $(id).addEventListener("change",async()=>{settings[key]=Number($(id).value);applyAudioVolumes();await persistState();});
+  }
+  for(const [id,key,channel] of [["mainOutputSelect","mainOutput","main"],["cartOutputSelect","cartOutput","cart"],["previewOutputSelect","previewOutput","preview"]]){
+    $(id).addEventListener("change",async()=>{settings[key]=$(id).value||"";await applyAudioOutput(channel,settings[key],true);await persistState();});
+  }
   $("search").addEventListener("input",drawLibrary);
   document.querySelectorAll("[data-filter]").forEach(b=>b.addEventListener("click",()=>{
     filter=b.dataset.filter;document.querySelectorAll("[data-filter]").forEach(x=>x.classList.toggle("active",x===b));drawLibrary();
@@ -1065,8 +1089,8 @@ function bindEvents(){
     await persistState();drawCampaigns();e.target.reset();$("campaignTime").value="12:00";fillMediaSelects();showToast("Campanha local cadastrada.");writeLog("system","Campanha criada: "+name,{title:m.name,result:"ativa"});
   });
   $("settingsForm").addEventListener("submit",async e=>{
-    e.preventDefault();settings={stationName:$("stationNameInput").value.trim()||"Emissora",frequency:$("stationFrequencyInput").value.trim(),timezone:$("timezoneInput").value};
-    await persistState();renderStation();showToast("Configurações da emissora salvas neste navegador.");writeLog("system","Configurações da emissora alteradas",{result:"salvas"});
+    e.preventDefault();settings={...settings,stationName:$("stationNameInput").value.trim()||"Emissora",frequency:$("stationFrequencyInput").value.trim(),timezone:$("timezoneInput").value};
+    await persistState();renderStation();drawClock();await syncClock();showToast("Configurações da emissora salvas neste navegador.");writeLog("system","Configurações da emissora alteradas",{result:"salvas"});
   });
   $("settingsShortcut").addEventListener("click",()=>showView("settings"));
   $("exportCsv").addEventListener("click",()=>{

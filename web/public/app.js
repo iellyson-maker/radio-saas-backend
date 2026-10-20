@@ -4,6 +4,8 @@
 const $ = id => document.getElementById(id);
 const mainAudio = $("audio");
 const cartAudio = $("cartAudio");
+const core = window.QolanLogic;
+if(!core)throw new Error("Qolan Studio core logic is unavailable.");
 const DB_NAME = "qolan-studio-db";
 const DB_VERSION = 1;
 const APP_KEY = "main";
@@ -52,8 +54,8 @@ const fmt = sec => {
   sec = Number.isFinite(Number(sec)) ? Math.max(0,Math.floor(Number(sec))) : 0;
   return pad(Math.floor(sec/60)) + ":" + pad(sec%60);
 };
-const localDateKey = d => d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
-const timeKey = d => pad(d.getHours())+":"+pad(d.getMinutes());
+const localDateKey = d => core.stationClockParts(d,settings.timezone).dateKey;
+const timeKey = d => core.stationClockParts(d,settings.timezone).timeKey;
 const escapeHtml = value => String(value == null ? "" : value).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const bytesLabel = n => {
   if (!Number.isFinite(Number(n))) return "—";
@@ -175,6 +177,7 @@ async function restoreState() {
     campaigns=Array.isArray(state.campaigns)?state.campaigns:[];
     logs=Array.isArray(state.logs)?state.logs:[];
     settings={...settings,...(state.settings||{})};
+    if(!core.isValidTimeZone(settings.timezone))settings.timezone="America/Sao_Paulo";
     segue=!!state.segue;
     queue=(Array.isArray(state.queueIds)?state.queueIds:[]).map(id=>media.find(m=>m.id===id)).filter(Boolean);
   }
@@ -207,7 +210,7 @@ function finishSession(result) {
   if(!activeSession)return;
   const session=activeSession;
   activeSession=null;
-  const seconds=Math.max(0,Number(audio.currentTime)||0);
+  const seconds=Math.max(0,Number(mainAudio.currentTime)||0);
   const isComplete=result==="concluída";
   writeLog(isComplete?"play-complete":result==="erro"?"play-error":"play-interrupted",
     (isComplete?"Concluída: ":result==="erro"?"Falha: ":"Interrompida: ")+session.title,
@@ -217,9 +220,9 @@ function findMedia(id){return media.find(m=>m.id===id);}
 function setStatus(text){$("status").textContent=text;}
 function setPlayState(text, playing=false){$("playState").textContent=text;$("playState").classList.toggle("playing",playing);}
 function drawClock(){
-  const d=now();
-  $("clock").textContent=d.toLocaleTimeString("pt-BR",{hour12:false});
-  $("dateLabel").textContent=d.toLocaleDateString("pt-BR",{weekday:"short",day:"2-digit",month:"short"}).toUpperCase();
+  const d=now(),p=core.stationClockParts(d,settings.timezone);
+  $("clock").textContent=p.hour+":"+p.minute+":"+p.second;
+  $("dateLabel").textContent=new Intl.DateTimeFormat("pt-BR",{timeZone:p.timeZone==="local"?undefined:p.timeZone,weekday:"short",day:"2-digit",month:"short"}).format(d).toUpperCase();
 }
 function showView(view){
   if(!$("view-"+view))view="console";
@@ -259,7 +262,7 @@ function renderStats(){
 function estimatedQueueTime(index){
   let seconds=0;if(current&&!mainAudio.paused&&!mainAudio.ended)seconds=Math.max(0,(Number(mainAudio.duration)||current.duration||0)-mainAudio.currentTime);
   for(let i=0;i<index;i++)seconds+=Number(queue[i].duration)||0;
-  return new Date(Date.now()+seconds*1000).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
+  return new Intl.DateTimeFormat("pt-BR",{timeZone:core.stationClockParts(new Date(),settings.timezone).timeZone==="local"?undefined:settings.timezone,hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(new Date(Date.now()+seconds*1000));
 }
 function drawQueue(){
   $("queueCount").textContent=queue.length+" itens";$("statQueue").textContent=String(queue.length);
@@ -357,17 +360,17 @@ function chooseRotation(){
 function play(m,source="manual"){
   if(!m)return;
   if(activeSession)finishSession("interrompida");
-  audio.pause();
-  audio.volume=1;
+  mainAudio.pause();
+  mainAudio.volume=1;
   current=m;
   pendingSource=source;
-  audio.src=m.url;
-  audio.load();
+  mainAudio.src=m.url;
+  mainAudio.load();
   renderCurrent();
   setPlayState("CARREGANDO");
   $("playBtn").textContent="Ⅱ";
   setStatus("CARREGANDO ÁUDIO");
-  audio.play().then(()=>{
+  mainAudio.play().then(()=>{
     setPlayState("REPRODUZINDO",true);
     setStatus("REPRODUZINDO");
     initializeMeter();
@@ -381,7 +384,7 @@ function play(m,source="manual"){
 }
 function next(){
   clearInterval(fadeTimer);
-  audio.volume=1;
+  mainAudio.volume=1;
   if(queue.length){
     const m=queue.shift();
     persistState();drawQueue();
@@ -397,9 +400,9 @@ function next(){
 function stopPlayback(reason="Parada manual."){
   clearInterval(fadeTimer);
   if(activeSession)finishSession("interrompida");
-  audio.pause();
-  audio.currentTime=0;
-  audio.volume=1;
+  mainAudio.pause();
+  mainAudio.currentTime=0;
+  mainAudio.volume=1;
   $("playBtn").textContent="▶";
   setPlayState("PARADO");
   setStatus("SISTEMA PRONTO");
@@ -412,23 +415,23 @@ function togglePlay(){
     if(media.length){play(media[0],"biblioteca");return;}
     showToast("Importe um arquivo de áudio primeiro.",true);return;
   }
-  if(audio.paused){
-    audio.play().then(()=>{$("playBtn").textContent="Ⅱ";setPlayState("REPRODUZINDO",true);setStatus("REPRODUZINDO");}).catch(()=>showToast("O navegador bloqueou a reprodução. Clique novamente.",true));
+  if(mainAudio.paused){
+    mainAudio.play().then(()=>{$("playBtn").textContent="Ⅱ";setPlayState("REPRODUZINDO",true);setStatus("REPRODUZINDO");}).catch(()=>showToast("O navegador bloqueou a reprodução. Clique novamente.",true));
   }else{
-    audio.pause();$("playBtn").textContent="▶";setPlayState("PAUSADO");setStatus("PAUSADO");
+    mainAudio.pause();$("playBtn").textContent="▶";setPlayState("PAUSADO");setStatus("PAUSADO");
   }
 }
 function fadeNext(){
-  if(audio.paused||!current){showToast("Não há áudio tocando para fazer fade.",true);return;}
+  if(mainAudio.paused||!current){showToast("Não há áudio tocando para fazer fade.",true);return;}
   clearInterval(fadeTimer);
-  const start=audio.volume,steps=25;
+  const start=mainAudio.volume,steps=25;
   let step=0;
   $("fadeBtn").disabled=true;
   fadeTimer=setInterval(()=>{
     step++;
-    audio.volume=Math.max(0,start*(1-step/steps));
+    mainAudio.volume=Math.max(0,start*(1-step/steps));
     if(step>=steps){
-      clearInterval(fadeTimer);fadeTimer=null;audio.volume=1;$("fadeBtn").disabled=false;
+      clearInterval(fadeTimer);fadeTimer=null;mainAudio.volume=1;$("fadeBtn").disabled=false;
       if(activeSession)finishSession("fade-out");
       next();
     }
@@ -515,7 +518,8 @@ async function updateMediaType(id,type){
 async function removeMedia(id){
   const m=findMedia(id);if(!m)return;
   if(!window.confirm("Remover "+m.name+" do armazenamento local?"))return;
-  if(current&&current.id===id)stopPlayback("Faixa removida.");
+  if(currentCart&&currentCart.id===id)stopCartPlayback(true);
+  if(current&&current.id===id){stopPlayback("Faixa removida.");current=null;}
   media=media.filter(x=>x.id!==id);queue=queue.filter(x=>x.id!==id);
   schedules=schedules.filter(x=>x.mediaId!==id);campaigns=campaigns.filter(x=>x.mediaId!==id);
   try{await dbDelete("media",id);}catch(_){}
@@ -525,35 +529,26 @@ async function removeMedia(id){
 }
 function scheduleTick(){
   if(!auto||!db)return;
-  const d=now(),tk=timeKey(d),dk=localDateKey(d),minute=dk+" "+tk;
+  const due=core.collectDueItems(schedules,campaigns,id=>findMedia(id),now(),settings.timezone);
+  const minute=due.minuteKey.replace("@"," ");
   if(minute===lastSchedulerMinute)return;
   lastSchedulerMinute=minute;
-  let changed=false;
-  for(const item of schedules.filter(s=>s.enabled&&s.time===tk&&(s.day==="*"||Number(s.day)===d.getDay()))){
-    const key=dk+"@"+tk;
-    if(item.lastFiredAt===key)continue;
-    item.lastFiredAt=key;
-    const m=findMedia(item.mediaId);
-    if(m){queue.unshift(m);writeLog("scheduled","Evento na fila: "+item.label,{mediaId:m.id,title:m.name,type:m.type,source:"agenda local",result:"inserido na fila"});changed=true;}
+  if(!due.events.length)return;
+  queue.unshift(...due.events.map(event=>event.media));
+  for(const event of due.events){
+    const item=event.item,m=event.media;
+    if(event.kind==="schedule")writeLog("scheduled","Evento na fila: "+item.label,{mediaId:m.id,title:m.name,type:m.type,source:"agenda local",result:"inserido na fila"});
+    else writeLog("campaign","Campanha na fila: "+item.name,{mediaId:m.id,title:m.name,type:m.type,source:"campanha local",result:"inserido na fila"});
   }
-  for(const c of campaigns.filter(x=>x.enabled&&x.time===tk&&(x.day==="*"||Number(x.day)===d.getDay())&&dk>=x.startDate&&dk<=x.endDate)){
-    const key=dk+"@"+tk;
-    if(c.lastFiredAt===key)continue;
-    c.lastFiredAt=key;
-    const m=findMedia(c.mediaId);
-    if(m){queue.unshift(m);writeLog("campaign","Campanha na fila: "+c.name,{mediaId:m.id,title:m.name,type:m.type,source:"campanha local",result:"inserido na fila"});changed=true;}
-  }
-  if(changed){
-    drawQueue();drawSchedules();drawCampaigns();persistState();
-    if(audio.paused&&queue.length)next();
-    else showToast("Evento de programação adicionado à fila. A execução aguardará o item atual terminar.");
-  }
+  drawQueue();drawSchedules();drawCampaigns();persistState();
+  if(mainAudio.paused&&queue.length&&!currentCart)next();
+  else showToast(due.events.length+" evento(s) de programação entrou/entraram na fila na ordem configurada.");
 }
 function updateProgress(){
-  const duration=Number(audio.duration)||0;
-  $("elapsed").textContent=fmt(audio.currentTime||0);
+  const duration=Number(mainAudio.duration)||0;
+  $("elapsed").textContent=fmt(mainAudio.currentTime||0);
   $("duration").textContent=fmt(duration);
-  $("progress").style.width=duration?Math.min(100,(audio.currentTime/duration)*100)+"%":"0%";
+  $("progress").style.width=duration?Math.min(100,(mainAudio.currentTime/duration)*100)+"%":"0%";
 }
 async function refreshDiagnostics(){
   try{
@@ -594,19 +589,21 @@ async function exportBackup(){
 }
 async function restoreBackup(file){
   try{
+    if(!file)throw new Error("Nenhum arquivo selecionado.");
+    if(file.size>5*1024*1024)throw new Error("O backup excede 5 MB.");
     const payload=JSON.parse(await file.text());
-    if(payload.product!=="Qolan Studio"||payload.schemaVersion!==1)throw new Error("Este arquivo não é um backup compatível do Qolan Studio.");
-    if(payload.settings&&typeof payload.settings==="object")settings={...settings,...payload.settings};
-    if(Array.isArray(payload.schedules))schedules=payload.schedules.filter(s=>s&&typeof s==="object"&&typeof s.time==="string"&&typeof s.mediaId==="string");
-    if(Array.isArray(payload.campaigns))campaigns=payload.campaigns.filter(c=>c&&typeof c==="object"&&typeof c.time==="string"&&typeof c.mediaId==="string");
-    if(Array.isArray(payload.logs))logs=payload.logs.slice(0,500);
-    queue=(Array.isArray(payload.queueIds)?payload.queueIds:[]).map(findMedia).filter(Boolean);
-    await persistState();renderEverything();fillSettings();showToast("Backup importado. Reimporte os arquivos que não estiverem na biblioteca local.");
-  }catch(err){showToast("Não foi possível importar o backup: "+err.message,true);}
+    const clean=core.normalizeBackup(payload,new Set(media.map(m=>m.id)));
+    settings=clean.settings;schedules=clean.schedules;campaigns=clean.campaigns;logs=clean.logs;
+    queue=clean.queueIds.map(findMedia).filter(Boolean);
+    await persistState();renderEverything();fillSettings();
+    showToast("Backup importado. Reimporte separadamente os arquivos de áudio ausentes.");
+  }catch(err){showToast("Não foi possível importar o backup: "+(err.message||"arquivo inválido"),true);}
 }
 async function deleteAllMedia(){
   if(!window.confirm("Isto remove todos os áudios armazenados neste navegador e seus agendamentos/campanhas. Continuar?"))return;
   stopPlayback("Biblioteca removida.");
+  if(currentCart)stopCartPlayback(true);
+  current=null;
   for(const url of urlSet)URL.revokeObjectURL(url);
   urlSet.clear();media=[];queue=[];schedules=[];campaigns=[];
   await dbClear("media");await persistState();renderEverything();
@@ -637,7 +634,7 @@ function playCart(m,source="cartwall"){
   writeLog("cart-start","Cartwall: "+m.name,{mediaId:m.id,title:m.name,type:m.type,source,result:"disparo iniciado"});
   cartAudio.play().catch(err=>{const failed=currentCart;stopCartPlayback(false);if(failed)writeLog("play-error","Falha no disparo: "+failed.name,{mediaId:failed.id,title:failed.name,type:failed.type,source,result:err.name||"erro"});showToast("Não foi possível disparar este áudio. Verifique o arquivo e tente novamente.",true);});
 }
-function finishCartPlayback(){const finished=currentCart;currentCart=null;restoreMainVolume();$("cartNowLabel").textContent="Cartwall aguardando disparo";if(finished)writeLog("cart-complete","Disparo concluído: "+finished.name,{mediaId:finished.id,title:finished.name,type:finished.type,source:finished.source,result:"concluído"});}
+function finishCartPlayback(){const finished=currentCart;currentCart=null;restoreMainVolume();$("cartNowLabel").textContent="Cartwall aguardando disparo";if(finished)writeLog("cart-complete","Disparo concluído: "+finished.name,{mediaId:finished.id,title:finished.name,type:finished.type,source:finished.source,result:"concluído"});if(auto&&mainAudio.paused&&queue.length)next();}
 function buildRotationBlock(){
   const count=Math.max(1,Math.min(20,Number($("rotationCount").value)||8));
   const blocked=new Set(queue.map(m=>m.id));if(current)blocked.add(current.id);
@@ -662,7 +659,7 @@ function renderNews(){
 }
 async function loadNews(){
   const source=$("newsSourceSelect").value;setNewsStatus("CONSULTANDO…","loading");$("refreshNewsBtn").disabled=true;
-  try{const r=await fetch("/api/news/"+encodeURIComponent(source),{cache:"no-store"});const d=await r.json();if(!r.ok||!d.ok)throw new Error(d.message||"Fonte indisponível");newsItems=d.items||[];newsLoadedSource=source;newsLoadedAt=Date.now();renderNews();setNewsStatus(newsItems.length+" manchetes · "+new Date(d.updatedAt||Date.now()).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"}),"success");}
+  try{const r=await fetch("/api/news/"+encodeURIComponent(source),{cache:"no-store"});const d=await r.json();if(!r.ok||!d.ok)throw new Error(d.message||"Fonte indisponível");newsItems=d.items||[];newsLoadedSource=source;newsLoadedAt=Date.now();renderNews();setNewsStatus((d.stale?"CACHE ANTIGO · ":"")+(d.cached&&!d.stale?"CACHE · ":"")+newsItems.length+" manchetes · "+new Date(d.updatedAt||Date.now()).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"}),"success");}
   catch(e){newsItems=[];renderNews();setNewsStatus("FALHA NA FONTE","error");$("newsList").insertAdjacentHTML("afterbegin",'<div class="news-error">'+escapeHtml(e.message||"Tente novamente")+'</div>');}
   finally{$("refreshNewsBtn").disabled=false;}
 }
@@ -768,14 +765,14 @@ function bindEvents(){
   cartAudio.addEventListener("error",()=>{if(currentCart){const c=currentCart;stopCartPlayback(false);writeLog("play-error","Falha no disparo: "+c.name,{mediaId:c.id,title:c.name,type:c.type,source:c.source,result:"erro"});}});
   $("stopBtn").addEventListener("click",()=>stopPlayback("Reprodução parada."));
   $("nextBtn").addEventListener("click",next);
-  $("prevBtn").addEventListener("click",()=>{if(current){audio.currentTime=0;if(audio.paused)togglePlay();}});
+  $("prevBtn").addEventListener("click",()=>{if(current){mainAudio.currentTime=0;if(mainAudio.paused)togglePlay();}});
   $("fadeBtn").addEventListener("click",fadeNext);
   $("segueBtn").addEventListener("click",()=>{segue=!segue;$("segueBtn").textContent="SEGUE: "+(segue?"ON":"OFF");writeLog("system","Segue "+(segue?"ativado":"desativado"),{result:segue?"on":"off"});persistState();});
   $("autoBtn").addEventListener("click",()=>{
     auto=!auto;refreshMode();
     writeLog("automation","Automação local "+(auto?"ativada":"desativada"),{result:auto?"on":"off"});
     showToast(auto?"Automação local ligada. Mantenha esta aba aberta e o áudio permitido.":"Automação local desligada.");
-    if(auto&&audio.paused&&queue.length)next();
+    if(auto&&mainAudio.paused&&queue.length)next();
   });
   $("clearQueue").addEventListener("click",()=>{queue=[];drawQueue();persistState();writeLog("system","Fila limpa",{result:"fila vazia"});});
   $("saveQueueBtn").addEventListener("click",async()=>{await persistState();showToast("Fila salva neste navegador.");});
@@ -820,17 +817,17 @@ function bindEvents(){
       if(carts[index])playCart(carts[index],"cartwall "+e.key);
     }
   });
-  audio.addEventListener("play",()=>{if(!activeSession)startSession(pendingSource);setPlayState("REPRODUZINDO",true);$("playBtn").textContent="Ⅱ";setStatus("REPRODUZINDO");initializeMeter();});
-  audio.addEventListener("pause",()=>{if(audio.ended)return;if(!audio.currentSrc)return;if($("playState").textContent==="REPRODUZINDO")setPlayState("PAUSADO");});
-  audio.addEventListener("ended",()=>{
+  mainAudio.addEventListener("play",()=>{if(!activeSession)startSession(pendingSource);setPlayState("REPRODUZINDO",true);$("playBtn").textContent="Ⅱ";setStatus("REPRODUZINDO");initializeMeter();});
+  mainAudio.addEventListener("pause",()=>{if(mainAudio.ended)return;if(!mainAudio.currentSrc)return;if($("playState").textContent==="REPRODUZINDO")setPlayState("PAUSADO");});
+  mainAudio.addEventListener("ended",()=>{
     $("playState").classList.remove("playing");
     finishSession("concluída");$("playBtn").textContent="▶";
     if(queue.length&&(auto||segue))next();
     else if(auto)next();
     else{setPlayState("FIM DA FAIXA");setStatus("SISTEMA PRONTO");}
   });
-  audio.addEventListener("timeupdate",updateProgress);
-  audio.addEventListener("error",()=>{
+  mainAudio.addEventListener("timeupdate",updateProgress);
+  mainAudio.addEventListener("error",()=>{
     if(!current)return;
     if(activeSession)finishSession("erro");
     else writeLog("play-error","Erro ao carregar: "+current.name,{mediaId:current.id,title:current.name,result:"erro"});

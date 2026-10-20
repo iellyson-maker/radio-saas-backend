@@ -28,7 +28,7 @@ child.stderr.on("data", chunk => { output += chunk.toString(); });
     assert.equal(health.ok, true);
     assert.equal(health.service, "qolan-studio-web");
     assert.equal(health.product, "Qolan Studio");
-    assert.equal(health.version, "0.3.0");
+    assert.equal(health.version, "0.4.0");
 
     const pageResponse = await fetch(base + "/");
     assert.equal(pageResponse.status, 200);
@@ -36,8 +36,11 @@ child.stderr.on("data", chunk => { output += chunk.toString(); });
     assert.match(page, /Qolan Studio/);
     assert.match(page, /Console de estúdio/);
     assert.match(page, /Cartwall/);
-    assert.match(page, /styles\.css\?v=0\.3\.0/);
-    assert.match(page, /app\.js\?v=0\.3\.0/);
+    assert.match(page, /Notícias & pautas/);
+    assert.match(page, /Estúdio visual/);
+    assert.match(page, /ESTÚDIO 01/);
+    assert.match(page, /styles\.css\?v=0\.4\.0/);
+    assert.match(page, /app\.js\?v=0\.4\.0/);
     assert.match(page, /\.view\s*\{\s*display:\s*none\s*;/);
     assert.match(page, /\.view\.active\s*\{\s*display:\s*block\s*;/);
     for (const feature of ["view-console", "view-library", "view-programming", "view-commercials", "view-logs", "view-diagnostics", "view-settings"]) {
@@ -46,7 +49,7 @@ child.stderr.on("data", chunk => { output += chunk.toString(); });
     assert.match(page, /Prova de veiculação/);
     assert.match(page, /não é um motor de transmissão 24\/7/i);
 
-    const appResponse = await fetch(base + "/app.js?v=0.3.0");
+    const appResponse = await fetch(base + "/app.js?v=0.4.0");
     assert.equal(appResponse.status, 200);
     const appJs = await appResponse.text();
     assert.match(appJs, /indexedDB\.open/);
@@ -54,7 +57,7 @@ child.stderr.on("data", chunk => { output += chunk.toString(); });
     assert.match(appJs, /play-complete/);
     assert.match(appJs, /classList\.toggle\("playing",playing\)/);
 
-    const cssResponse = await fetch(base + "/styles.css?v=0.3.0");
+    const cssResponse = await fetch(base + "/styles.css?v=0.4.0");
     assert.equal(cssResponse.status, 200);
     assert.match(cssResponse.headers.get("content-type") || "", /text\/css/);
     const css = await cssResponse.text();
@@ -62,7 +65,10 @@ child.stderr.on("data", chunk => { output += chunk.toString(); });
     assert.match(css, /\.shell\s*\{\s*display:\s*grid/);
     assert.match(css, /\.state-pill\.playing/);
     assert.match(css, /\.cart-button/);
-    console.log("Smoke tests passed: health/version 0.3.0, broadcast console labels, versioned assets, single active view, playback state styling, seven UI modules, persistent media, local scheduler and logs.");
+    assert.match(css, /\.studio-grid/);
+    assert.match(css, /\.ops-metrics/);
+    assert.match(css, /\.visual-stage/);
+    console.log("Smoke tests passed: health/version 0.4.0, studio-console modules, versioned assets, single active view, broadcast styling, persistent media, local scheduler and logs.");
   } catch (error) {
     console.error(error);
     console.error(output);

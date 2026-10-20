@@ -3,7 +3,7 @@ const path = require("node:path");
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
-const VERSION = "0.3.0";
+const VERSION = "0.4.0";
 const PUBLIC_DIR = path.join(__dirname, "public");
 
 app.disable("x-powered-by");

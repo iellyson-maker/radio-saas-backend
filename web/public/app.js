@@ -354,6 +354,7 @@ async function refreshAudioDevices(silent=false){
     if(status)status.textContent=(supportsMedia||supportsContext)
       ?audioOutputDevices.length+" saída(s) detectada(s). Roteamento individual depende das permissões do navegador."
       :"Dispositivos detectados; este navegador pode não permitir roteamento individual dos canais.";
+    await Promise.all([applyAudioOutput("main",settings.mainOutput||"",false),applyAudioOutput("cart",settings.cartOutput||"",false),applyAudioOutput("preview",settings.previewOutput||"",false)]);
     if(!silent)showToast(audioOutputDevices.length+" dispositivo(s) de saída detectado(s).");
   }catch(err){
     if(status)status.textContent="Não foi possível enumerar dispositivos: "+(err.message||"permissão indisponível");
@@ -585,10 +586,8 @@ function play(m,source="manual"){
   if(!m)return;
   if(activeSession)finishSession("interrompida");
   mainAudio.pause();
-  if(currentCart){
-    if(!cartDuckApplied){mainVolumeBeforeCart=1;cartDuckApplied=true;}
-    mainAudio.volume=Math.min(mainVolumeBeforeCart,0.30);
-  }else mainAudio.volume=1;
+  if(currentCart){mainVolumeBeforeCart=volumePercent("mainVolume",100)/100;cartDuckApplied=true;mainAudio.volume=Math.min(mainVolumeBeforeCart,0.30);}
+  else{cartDuckApplied=false;mainAudio.volume=volumePercent("mainVolume",100)/100;}
   current=m;
   pendingSource=source;
   mainAudio.src=m.url;
@@ -680,6 +679,7 @@ async function initializeMeter(){
       meterNodes.forEach(n=>n.gain.value=0);
       analyzers.forEach((a,i)=>{splitter.connect(a,i);a.connect(meterNodes[i]);meterNodes[i].connect(audioContext.destination);});
     }
+    await applyAudioOutput("main",settings.mainOutput||"",false);
     await audioContext.resume();
     $("audioContextState").textContent="RMS L/R ATIVO";
     if(meterTimer)clearInterval(meterTimer);
@@ -872,7 +872,7 @@ function stopCartPlayback(write=true){
 function playCart(m,source="cartwall"){
   if(!m)return;if(currentCart)stopCartPlayback(true);else restoreMainVolume();
   currentCart={id:m.id,name:m.name,type:m.type,source};
-  if(!mainAudio.paused&&!mainAudio.ended){mainVolumeBeforeCart=mainAudio.volume;mainAudio.volume=Math.min(mainVolumeBeforeCart,0.30);cartDuckApplied=true;$("cartDuckingLabel").textContent="Programa atenuado";}
+  if(!mainAudio.paused&&!mainAudio.ended){mainVolumeBeforeCart=volumePercent("mainVolume",100)/100;mainAudio.volume=Math.min(mainVolumeBeforeCart,0.30);cartDuckApplied=true;$("cartDuckingLabel").textContent="Programa atenuado";}
   else $("cartDuckingLabel").textContent="Sem programa principal";
   $("cartNowLabel").textContent=m.name;setCartStatus("DISPARANDO",true);drawCarts();cartAudio.src=m.url;cartAudio.currentTime=0;cartAudio.load();
   writeLog("cart-start","Cartwall: "+m.name,{mediaId:m.id,title:m.name,type:m.type,source,result:"disparo iniciado"});
@@ -1136,7 +1136,7 @@ function bindEvents(){
 }
 async function init(){
   bindEvents();restoreObsAddress();initLiveNotes();setObsStatus("DESCONECTADO","disconnected");
-  drawClock();setInterval(drawClock,1000);
+  drawClock();setInterval(drawClock,1000);setInterval(syncClock,60000);
   setInterval(scheduleTick,1000);
   refreshMode();
   try{
@@ -1147,14 +1147,14 @@ async function init(){
     $("diagStorage").textContent="Indisponível";
     showToast("O navegador não permitiu abrir a biblioteca persistente: "+err.message,true);
   }
-  renderEverything();fillSettings();fillMediaSelects();
+  renderEverything();fillSettings();fillMediaSelects();applyAudioVolumes();await refreshAudioDevices(true);await syncClock();
   const today=localDateKey(now());
   $("campaignStart").value=today;$("campaignEnd").value=today;
   await refreshDiagnostics();
   writeLog("system","Console Qolan Studio iniciado",{result:"pronto"});
 }
 window.addEventListener("beforeunload",()=>{
-  clearInterval(meterTimer);clearInterval(fadeTimer);try{cartAudio.pause();}catch(_){}try{if(obsSocket)disconnectObs(false);}catch(_){}
+  clearInterval(meterTimer);clearInterval(fadeTimer);try{cartAudio.pause();}catch(_){}try{previewAudio.pause();}catch(_){}try{if(obsSocket)disconnectObs(false);}catch(_){}
   for(const url of urlSet)URL.revokeObjectURL(url);
 });
 init();

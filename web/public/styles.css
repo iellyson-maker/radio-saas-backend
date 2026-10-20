@@ -1028,3 +1028,144 @@ input, select {
   .clock-block small {font-size:6px; letter-spacing:.3px}
   .preview-deck-body {padding:11px}
 }
+
+
+/* Qolan Studio 0.8.1 — compact radio console, premium clock and on/off cart pads */
+.topbar {min-height:66px; padding:5px 15px; gap:12px}
+.topbar-right {gap:10px}
+.commandbar {min-height:40px; padding:4px 15px; gap:10px}
+.command-actions {gap:7px}
+.command-actions .btn {padding:7px 10px}
+.content {padding:9px 15px 18px}
+.studio-heading {margin:0 0 7px; padding-bottom:7px; gap:12px}
+.studio-heading h1 {font-size:20px; margin:2px 0 1px; letter-spacing:-.3px}
+.studio-subtitle {display:none}
+.studio-heading .eyebrow {font-size:8px}
+.studio-heading-meta {gap:8px}
+.ops-metrics {gap:6px; margin-bottom:8px}
+.ops-metric {min-height:44px; padding:6px 9px; gap:1px 8px}
+.ops-metric>b {font-size:19px; max-width:150px}
+.ops-metric .metric-label {font-size:8px}
+.ops-metric small {font-size:9px}
+.clock-premium {display:flex; flex-direction:column; justify-content:center; gap:2px; min-width:188px; padding:6px 13px 7px; border:1px solid #295544; border-radius:7px; background:radial-gradient(ellipse at 12% 0%,rgba(67,214,160,.16),transparent 65%),linear-gradient(145deg,#162720,#10191b 78%); box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 0 18px rgba(38,187,128,.07); text-align:right}
+.clock-premium #dateLabel {color:#8db5a5; font-size:8px; font-weight:800; letter-spacing:1.2px}
+.clock-premium #clock {color:#d7ffec; font-family:"Consolas","SFMono-Regular",monospace; font-size:31px; font-weight:850; line-height:1; letter-spacing:1.5px; font-variant-numeric:tabular-nums; text-shadow:0 0 16px rgba(79,233,173,.25)}
+.clock-premium #clockSource {overflow:hidden; color:#65b993; font-size:7px; font-weight:850; letter-spacing:.65px; text-overflow:ellipsis}
+.btn-pfl-shortcut {border:1px solid #34624f; color:#a5f1d1; background:#15281f; font-size:9px; font-weight:850; letter-spacing:.4px}
+.btn-pfl-shortcut:hover {border-color:#59cf9d; color:#d8ffed; background:#1b382b}
+.player-head-actions {display:flex; align-items:center; gap:8px}
+.studio-grid {grid-template-columns:minmax(0,1.04fr) minmax(520px,.96fr); gap:10px}
+.studio-main-column,.studio-side-column {gap:10px}
+.studio-panel-head {min-height:43px; padding:7px 11px}
+.studio-panel-head .panel-index {width:26px; height:26px; flex-basis:26px}
+.studio-cart-panel .cart-import-toolbar {gap:7px; padding:8px 10px}
+.studio-cart-panel .cart-import-copy b {font-size:11px}
+.studio-cart-panel .cart-import-copy small {font-size:9px}
+.studio-cart-panel .cart-import-actions .btn {padding:6px 8px; font-size:9px}
+.studio-cart-panel .cart-tabs {padding:6px 8px 4px; gap:4px}
+.studio-cart-panel .cart-tabs button {padding:5px 7px; font-size:8px}
+.studio-cart-panel .cart-grid {grid-template-columns:repeat(4,minmax(0,1fr)); gap:6px; max-height:none; height:auto; overflow:visible; padding:7px}
+.studio-cart-panel .cart-pad {min-height:116px; height:auto}
+.studio-cart-panel .cart-pad-fire {gap:5px; padding:7px 7px 6px}
+.studio-cart-panel .cart-pad-icon {width:25px; height:24px; font-size:15px}
+.studio-cart-panel .cart-pad-name {min-height:27px; font-size:10px; line-height:1.3}
+.studio-cart-panel .cart-pad-meta {font-size:7px}
+.studio-cart-panel .cart-pad-action {display:block; margin-top:1px; padding:4px 5px; border:1px solid rgba(255,255,255,.10); border-radius:3px; color:var(--pad-accent,#8debbd); background:rgba(0,0,0,.15); font-size:7px; font-weight:950; letter-spacing:.65px; text-align:center}
+.studio-cart-panel .cart-pad-fire.is-playing .cart-pad-action {border-color:#64dca8; color:#e5fff2; background:#24583f; animation:qolanOnAirPulse 1.7s ease-in-out infinite}
+.studio-cart-panel .cart-pad.is-playing {border-color:#84f4be; border-top-color:#d9ffe9; background:linear-gradient(145deg,#214b3b,#172a24); box-shadow:0 0 0 1px rgba(94,232,174,.35),0 0 20px rgba(57,202,143,.20)}
+.studio-cart-panel .cart-pad-tools {min-height:24px; padding:2px 4px}
+.studio-cart-panel .cart-pad-tools button {padding:3px 5px; font-size:8px}
+.cart-filter-empty {grid-column:1/-1; display:flex; flex-direction:column; justify-content:center; align-items:center; min-height:100px; gap:6px; border:1px dashed #34464b; border-radius:5px; color:#c9d5d9; background:#11191d; text-align:center}
+.cart-filter-empty small {max-width:320px; color:#81969e; font-size:10px; line-height:1.4}
+@keyframes qolanOnAirPulse {0%,100%{box-shadow:0 0 0 0 rgba(90,231,168,.10)}50%{box-shadow:0 0 0 3px rgba(90,231,168,.12)}}
+.studio-queue-panel .queue-summary {min-height:31px; padding:7px 10px}
+.studio-queue-summary b {color:#d9e8e6; font-size:10px}
+.rundown-head-actions {display:flex; align-items:center; gap:7px}
+.rundown-live-tag {display:inline-flex; align-items:center; gap:5px; color:#7fcda9; font-size:8px; font-weight:900; letter-spacing:.7px}
+.rundown-live-tag i {width:5px; height:5px; border-radius:50%; background:#49d6a0; box-shadow:0 0 8px rgba(73,214,160,.3)}
+.rundown-columns,.rundown-row {display:grid; grid-template-columns:34px 66px 72px minmax(0,1fr) 48px 86px; align-items:center; gap:7px}
+.rundown-columns {min-height:28px; padding:0 10px; border-top:1px solid #2a383e; border-bottom:1px solid #2a383e; color:#71868d; background:#10171b; font-size:7px; font-weight:900; letter-spacing:.6px}
+.rundown-columns span:nth-child(6) {text-align:right}
+.studio-queue-panel .rundown-list {display:flex; flex-direction:column; min-height:188px; max-height:320px; overflow:auto; background:#10171b}
+.rundown-row {position:relative; min-height:55px; padding:6px 10px; border-bottom:1px solid #26343a; background:#141d22}
+.rundown-row:hover {background:#1a282d}
+.rundown-row.is-next {background:linear-gradient(90deg,rgba(38,102,77,.25),rgba(20,29,34,.95) 50%); box-shadow:inset 2px 0 0 #46d6a1}
+.rundown-position {display:flex; flex-direction:column; align-items:center; gap:2px}
+.rundown-position b {color:#9aaeb4; font-size:11px; font-variant-numeric:tabular-nums}
+.rundown-position small {color:#586d74; font-size:6px; font-weight:850; letter-spacing:.5px}
+.rundown-row.is-next .rundown-position b {color:#81efb9}
+.rundown-eta {display:flex; flex-direction:column; gap:3px; min-width:0}
+.rundown-eta b {color:#b9d8ca; font:800 10px/1.2 "Consolas",monospace; font-variant-numeric:tabular-nums}
+.rundown-eta small {color:#617b70; font-size:6px; font-weight:900; letter-spacing:.4px}
+.rundown-kind {justify-self:start; max-width:100%; overflow:hidden; padding:4px 5px; border:1px solid #34564a; border-radius:3px; color:#89d9b4; background:#182b23; font-size:7px; font-weight:950; letter-spacing:.25px; text-overflow:ellipsis; white-space:nowrap}
+.rundown-kind.kind-spot {border-color:#6c522d; color:#edc272; background:#302719}
+.rundown-kind.kind-track {border-color:#30566d; color:#92d4f8; background:#192c37}
+.rundown-kind.kind-music {border-color:#384d68; color:#a7c4fa; background:#1b2738}
+.rundown-item-main {display:flex; flex-direction:column; gap:4px; min-width:0}
+.rundown-item-main>b {overflow:hidden; color:#e6eff1; font-size:10px; font-weight:750; text-overflow:ellipsis; white-space:nowrap}
+.rundown-item-main small {display:flex; align-items:center; gap:5px; overflow:hidden; color:#718b92; font-size:7px; font-weight:850; letter-spacing:.35px; text-overflow:ellipsis; white-space:nowrap}
+.rundown-item-main small i {width:4px; height:4px; flex:0 0 4px; border-radius:50%; background:#657780}
+.rundown-row.is-next .rundown-item-main small i {background:#4dd8a1}
+.rundown-duration {color:#c9d4d8; font:800 10px "Consolas",monospace; font-variant-numeric:tabular-nums}
+.rundown-row .row-actions {gap:2px; justify-content:flex-end}
+.rundown-row .icon-button {width:23px; height:24px; min-width:23px; font-size:10px}
+.rundown-list.empty-state {display:block; padding:0; min-height:188px}
+.rundown-empty {display:flex; flex-direction:column; justify-content:center; align-items:center; gap:7px; min-height:188px; padding:20px; text-align:center}
+.rundown-empty-mark {display:grid; place-items:center; width:34px; height:34px; border:1px solid #305245; border-radius:6px; color:#73d9ad; background:#172a22; font-size:24px}
+.rundown-empty b {color:#cddde0; font-size:11px}
+.rundown-empty small {max-width:365px; color:#82969d; font-size:9px; line-height:1.5}
+@media (max-width:1450px) {
+  .studio-grid {grid-template-columns:minmax(0,1fr)}
+  .studio-side-column {gap:10px}
+  .studio-cart-panel .cart-grid {grid-template-columns:repeat(4,minmax(0,1fr)); max-height:none}
+}
+@media (max-width:1250px) {
+  .topbar {padding-left:12px; padding-right:12px}
+  .topbar-right {gap:7px}
+  .clock-premium {min-width:166px; padding:5px 9px}
+  .clock-premium #clock {font-size:27px}
+  .studio-grid {grid-template-columns:minmax(0,1fr)}
+}
+@media (max-width:1050px) {
+  .rundown-columns,.rundown-row {grid-template-columns:28px 61px 65px minmax(0,1fr) 42px 78px; gap:5px}
+  .rundown-columns {padding:0 7px}
+  .rundown-row {padding:6px 7px}
+}
+@media (max-width:760px) {
+  .topbar {min-height:58px; padding:5px 10px}
+  .topbar-right {gap:6px}
+  .mode-chip {display:none}
+  .btn-pfl-shortcut {padding:6px 7px; font-size:8px}
+  .clock-premium {min-width:130px; padding:4px 7px}
+  .clock-premium #clock {font-size:22px; letter-spacing:1px}
+  .clock-premium #clockSource {font-size:6px}
+  .commandbar {min-height:38px; padding:4px 10px}
+  .command-actions .btn {padding:6px 8px; font-size:9px}
+  .content {padding:8px 9px 16px}
+  .studio-heading-meta {display:none}
+  .ops-metrics {grid-template-columns:repeat(2,minmax(0,1fr)); gap:5px}
+  .ops-metric {min-height:39px; padding:5px 7px}
+  .studio-cart-panel .cart-grid {grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px}
+  .studio-cart-panel .cart-pad {min-height:115px}
+  .rundown-columns {grid-template-columns:25px 54px 56px minmax(0,1fr) 38px}
+  .rundown-columns span:last-child {display:none}
+  .rundown-row {grid-template-columns:25px 54px 56px minmax(0,1fr) 38px}
+  .rundown-row .row-actions {grid-column:4/-1; justify-content:flex-end; margin-top:3px}
+  .rundown-row .rundown-item-main {grid-row:1; grid-column:4}
+  .rundown-row .rundown-duration {grid-column:5}
+  .rundown-kind {font-size:6px; padding:3px}
+  .player-head-actions .btn {display:none}
+}
+@media (max-width:440px) {
+  .clock-premium {min-width:112px}
+  .clock-premium #clock {font-size:18px}
+  .clock-premium #clockSource {max-width:110px; font-size:5px}
+  .topbar-right {gap:4px}
+  .topbar .breadcrumb {font-size:9px}
+  .rundown-columns,.rundown-row {grid-template-columns:23px 48px 51px minmax(0,1fr) 34px; gap:3px}
+  .rundown-item-main>b {font-size:9px}
+  .rundown-eta b {font-size:8px}
+}
+@media (prefers-reduced-motion:reduce) {
+  .studio-cart-panel .cart-pad-fire.is-playing .cart-pad-action {animation:none}
+}

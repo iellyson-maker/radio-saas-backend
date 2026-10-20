@@ -3,7 +3,7 @@ const path = require("node:path");
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
-const VERSION = "0.7.0";
+const VERSION = "0.8.1";
 const PUBLIC_DIR = path.join(__dirname, "public");
 
 const NEWS_FEEDS = Object.freeze({
@@ -50,7 +50,7 @@ function validateFeedUrl(value){
 async function fetchAllowedFeed(startUrl,fetchImpl=fetch){
   let target=validateFeedUrl(startUrl);
   for(let redirects=0;redirects<=MAX_FEED_REDIRECTS;redirects++){
-    const response=await fetchImpl(target.href,{headers:{accept:"application/rss+xml, application/xml, text/xml","user-agent":"QolanStudio/0.7.0 RSS reader"},signal:AbortSignal.timeout(9000),redirect:"manual"});
+    const response=await fetchImpl(target.href,{headers:{accept:"application/rss+xml, application/xml, text/xml","user-agent":"QolanStudio/0.8.1 RSS reader"},signal:AbortSignal.timeout(9000),redirect:"manual"});
     if(![301,302,303,307,308].includes(response.status))return response;
     const location=response.headers&&response.headers.get("location");
     try{if(response.body)await response.body.cancel();}catch(_){}

@@ -95,15 +95,21 @@
   return {settings,schedules,campaigns,logs,queueIds,cartSlots,jingleRotation};
  }
  function normalizeCartSlots(slots=[],size=12){
-  const result=Array.from({length:Math.max(1,Math.min(24,Number(size)||12))},(_,i)=>typeof slots[i]==="string"?slots[i]:null);
-  return result;
+  const raw=Array.from({length:Math.max(1,Math.min(24,Number(size)||12))},(_,i)=>typeof slots[i]==="string"&&slots[i]?slots[i]:null);
+  const seen=new Set();
+  return raw.map(id=>{
+   if(!id||seen.has(id))return null;
+   seen.add(id);return id;
+  });
  }
  function fillEmptyCartSlots(slots=[],mediaIds=[],size=12){
   const next=normalizeCartSlots(slots,size),assigned=[],overflow=[];
+  const used=new Set(next.filter(Boolean));
   for(const id of Array.from(mediaIds||[]).filter(x=>typeof x==="string"&&x)){
+   if(used.has(id))continue;
    const index=next.findIndex(x=>!x);
    if(index<0){overflow.push(id);continue;}
-   next[index]=id;assigned.push({slot:index,mediaId:id});
+   next[index]=id;used.add(id);assigned.push({slot:index,mediaId:id});
   }
   return {slots:next,assigned,overflow};
  }

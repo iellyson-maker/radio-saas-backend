@@ -4,6 +4,7 @@
 const $ = id => document.getElementById(id);
 const mainAudio = $("audio");
 const cartAudio = $("cartAudio");
+const previewAudio = $("previewAudio");
 const core = window.QolanLogic;
 if(!core)throw new Error("Qolan Studio core logic is unavailable.");
 const DB_NAME = "qolan-studio-db";
@@ -25,7 +26,11 @@ let segue = false;
 let schedules = [];
 let campaigns = [];
 let logs = [];
-let settings = { stationName:"Rádio Central", frequency:"98.7 FM", timezone:"America/Sao_Paulo" };
+let settings = { stationName:"Rádio Central", frequency:"98.7 FM", timezone:"America/Sao_Paulo", mainVolume:100, cartVolume:75, previewVolume:65, mainOutput:"", cartOutput:"", previewOutput:"" };
+let previewCurrent = null;
+let clockOffsetMs = 0;
+let clockSyncAvailable = false;
+let audioOutputDevices = [];
 let audioContext = null;
 let mediaSource = null;
 let splitter = null;
@@ -240,16 +245,145 @@ function finishSession(result) {
 function findMedia(id){return media.find(m=>m.id===id);}
 function setStatus(text){$("status").textContent=text;}
 function setPlayState(text, playing=false){$("playState").textContent=text;$("playState").classList.toggle("playing",playing);}
+function clockZoneLabel(){
+  try{return new Intl.DateTimeFormat("pt-BR",{timeZone:settings.timezone,timeZoneName:"short"}).formatToParts(new Date()).find(x=>x.type==="timeZoneName")?.value||settings.timezone;}
+  catch(_){return settings.timezone||"LOCAL";}
+}
 function drawClock(){
-  const d=now(),p=core.stationClockParts(d,settings.timezone);
+  const d=new Date(Date.now()+clockOffsetMs),p=core.stationClockParts(d,settings.timezone);
   $("clock").textContent=p.hour+":"+p.minute+":"+p.second;
   $("dateLabel").textContent=formatStationDate(d,{weekday:"short",day:"2-digit",month:"short"}).toUpperCase();
+  if($("clockSource"))$("clockSource").textContent=(clockSyncAvailable?"SERVIDOR SINCRONIZADO":"HORA DO DISPOSITIVO")+" · "+clockZoneLabel();
 }
+async function syncClock(){
+  const began=performance.now();
+  try{
+    const response=await fetch("/health",{cache:"no-store"}),received=performance.now();
+    if(!response.ok)throw new Error("Relógio do servidor indisponível.");
+    const data=await response.json(),serverMs=Date.parse(data.time);
+    if(!Number.isFinite(serverMs))throw new Error("Resposta de horário inválida.");
+    clockOffsetMs=serverMs+(received-began)/2-Date.now();clockSyncAvailable=true;
+  }catch(_){clockOffsetMs=0;clockSyncAvailable=false;}
+  drawClock();
+}
+function loadPreviewMedia(item){
+  if(!previewAudio)return;
+  previewAudio.pause();previewCurrent=item||null;
+  if(item){
+    previewAudio.src=item.url;previewAudio.currentTime=0;
+    previewAudio.volume=volumePercent("previewVolume",65)/100;previewAudio.load();
+    $("previewTitle").textContent=item.name;
+    $("previewMeta").textContent=(CATEGORY_LABELS[item.type]||item.type)+" · "+bytesLabel(item.size)+" · somente monitoração";
+    $("previewState").textContent="PRONTO";$("previewState").classList.remove("playing");
+    $("previewPlayBtn").textContent="▶ Iniciar pré-escuta";
+  }else{
+    previewAudio.removeAttribute("src");previewAudio.load();
+    $("previewTitle").textContent="Nenhuma faixa selecionada";
+    $("previewMeta").textContent="Escolha um arquivo da biblioteca.";
+    $("previewState").textContent="PARADO";$("previewState").classList.remove("playing");
+    $("previewPlayBtn").textContent="▶ Iniciar pré-escuta";
+  }
+  updatePreviewProgress();
+}
+function updatePreviewProgress(){
+  if(!previewAudio||!$("previewProgress"))return;
+  const duration=Number(previewAudio.duration)||0;
+  $("previewElapsed").textContent=fmt(previewAudio.currentTime||0);
+  $("previewDuration").textContent=fmt(duration||(previewCurrent&&previewCurrent.duration)||0);
+  $("previewProgress").style.width=duration?Math.min(100,(previewAudio.currentTime/duration)*100)+"%":"0%";
+}
+async function togglePreview(){
+  if(!previewCurrent){showToast("Selecione uma faixa para a pré-escuta.",true);return;}
+  if(previewAudio.paused){
+    try{await previewAudio.play();}
+    catch(err){showToast("Não foi possível iniciar a pré-escuta: "+(err.name||"erro")+". Verifique o formato e o dispositivo de saída.",true);}
+  }else previewAudio.pause();
+}
+function stopPreview(){
+  previewAudio.pause();try{previewAudio.currentTime=0;}catch(_){}
+  $("previewState").textContent="PARADO";$("previewState").classList.remove("playing");
+  $("previewPlayBtn").textContent="▶ Iniciar pré-escuta";updatePreviewProgress();
+}
+function volumePercent(key,fallback){
+  const v=Number(settings[key]);return Number.isFinite(v)?Math.max(0,Math.min(100,v)):fallback;
+}
+function applyAudioVolumes(){
+  const main=volumePercent("mainVolume",100)/100;
+  mainAudio.volume=currentCart?Math.min(main,.30):main;
+  cartAudio.volume=volumePercent("cartVolume",75)/100;previewAudio.volume=volumePercent("previewVolume",65)/100;
+  for(const [id,key,fallback] of [["mainVolumeSlider","mainVolume",100],["cartVolumeSlider","cartVolume",75],["previewVolumeSlider","previewVolume",65]]){
+    if($(id)&&document.activeElement!==$(id))$(id).value=String(volumePercent(key,fallback));
+  }
+  for(const [id,key,fallback] of [["mainVolumeValue","mainVolume",100],["cartVolumeValue","cartVolume",75],["previewVolumeValue","previewVolume",65]]){
+    if($(id))$(id).textContent=volumePercent(key,fallback)+"%";
+  }
+}
+async function applyAudioOutput(channel,deviceId,showErrors=true){
+  const key=channel+"Output",element={main:mainAudio,cart:cartAudio,preview:previewAudio}[channel];
+  if(!element)return false;
+  const target=deviceId==null?(settings[key]||""):String(deviceId);
+  try{
+    if(channel==="main"&&audioContext&&typeof audioContext.setSinkId==="function")await audioContext.setSinkId(target);
+    else if(typeof element.setSinkId==="function")await element.setSinkId(target);
+    else if(target)throw new Error("Este navegador não permite selecionar uma saída individual.");
+    settings[key]=target;return true;
+  }catch(err){
+    if(showErrors)showToast("Não foi possível aplicar esta saída: "+(err.message||"recurso não suportado")+". O áudio pode continuar na saída padrão.",true);
+    return false;
+  }
+}
+function updateOutputSelect(selectId,key){
+  const select=$(selectId);if(!select)return;
+  const selected=settings[key]||"";
+  const entries=[{id:"",label:"Saída padrão do sistema"},...audioOutputDevices.filter(d=>d.deviceId&&d.deviceId!=="default").map((d,i)=>({id:d.deviceId,label:d.label||("Saída de áudio "+(i+1))}))];
+  if(selected&&!entries.some(x=>x.id===selected))entries.push({id:selected,label:"Dispositivo anteriormente selecionado"});
+  select.innerHTML=entries.map(x=>'<option value="'+escapeHtml(x.id)+'">'+escapeHtml(x.label)+'</option>').join("");
+  select.value=selected;if(select.value!==selected)select.value="";
+}
+async function refreshAudioDevices(silent=false){
+  const status=$("audioRoutingStatus");
+  if(!navigator.mediaDevices||typeof navigator.mediaDevices.enumerateDevices!=="function"){
+    if(status)status.textContent="Este navegador não disponibiliza a lista de dispositivos de áudio.";return;
+  }
+  try{
+    const devices=await navigator.mediaDevices.enumerateDevices();audioOutputDevices=devices.filter(d=>d.kind==="audiooutput");
+    updateOutputSelect("mainOutputSelect","mainOutput");updateOutputSelect("cartOutputSelect","cartOutput");updateOutputSelect("previewOutputSelect","previewOutput");
+    const MediaContext=window.AudioContext||window.webkitAudioContext;
+    const supportsMedia=typeof HTMLMediaElement.prototype.setSinkId==="function";
+    const supportsContext=!!(MediaContext&&typeof MediaContext.prototype.setSinkId==="function");
+    if(status)status.textContent=(supportsMedia||supportsContext)
+      ?audioOutputDevices.length+" saída(s) detectada(s). Roteamento individual depende das permissões do navegador."
+      :"Dispositivos detectados; este navegador pode não permitir roteamento individual dos canais.";
+    await Promise.all([applyAudioOutput("main",settings.mainOutput||"",false),applyAudioOutput("cart",settings.cartOutput||"",false),applyAudioOutput("preview",settings.previewOutput||"",false)]);
+    if(!silent)showToast(audioOutputDevices.length+" dispositivo(s) de saída detectado(s).");
+  }catch(err){
+    if(status)status.textContent="Não foi possível enumerar dispositivos: "+(err.message||"permissão indisponível");
+    if(!silent)showToast("O navegador não permitiu listar as saídas de áudio.",true);
+  }
+}
+async function chooseAudioOutput(){
+  if(!navigator.mediaDevices||typeof navigator.mediaDevices.selectAudioOutput!=="function"){
+    showToast("O seletor de saídas deste navegador não está disponível. Tente Detectar dispositivos.",true);return;
+  }
+  try{
+    const device=await navigator.mediaDevices.selectAudioOutput();
+    if(device&&!audioOutputDevices.some(d=>d.deviceId===device.deviceId))audioOutputDevices.push({deviceId:device.deviceId,label:device.label||"Saída autorizada",kind:"audiooutput"});
+    updateOutputSelect("mainOutputSelect","mainOutput");updateOutputSelect("cartOutputSelect","cartOutput");updateOutputSelect("previewOutputSelect","previewOutput");
+    showToast("Saída autorizada pelo navegador. Selecione-a no canal desejado.");
+  }catch(err){if(err.name!=="AbortError")showToast("A seleção de saída não foi concluída: "+(err.message||"permissão negada"),true);}
+}
+function fillAudioSettingsUI(){
+  for(const [id,key] of [["mainOutputSelect","mainOutput"],["cartOutputSelect","cartOutput"],["previewOutputSelect","previewOutput"]]){
+    if($(id))$(id).value=settings[key]||"";
+  }
+  applyAudioVolumes();
+}
+
 function showView(view){
   if(!$("view-"+view))view="console";
   document.querySelectorAll(".view").forEach(el=>el.classList.toggle("active",el.id==="view-"+view));
   document.querySelectorAll(".nav-item").forEach(el=>el.classList.toggle("active",el.dataset.view===view));
-  const names={console:"Console de estúdio",library:"Biblioteca de mídia",programming:"Programação e automação",commercials:"Campanhas e comerciais",live:"Conteúdo ao vivo",visual:"Rádio visual / OBS",logs:"Registros de execução",diagnostics:"Diagnóstico do sistema",settings:"Configurações"};
+  const names={console:"Console de estúdio",preview:"Pré-escuta",audio:"Áudio técnico",library:"Biblioteca de mídia",programming:"Programação e automação",commercials:"Campanhas e comerciais",live:"Conteúdo ao vivo",visual:"Rádio visual / OBS",logs:"Registros de execução",diagnostics:"Diagnóstico do sistema",settings:"Configurações"};
   $("viewTitle").textContent=names[view]||"Qolan Studio";
   if(view==="library")drawLibrary();
   if(view==="programming")drawSchedules();
@@ -257,6 +391,8 @@ function showView(view){
   if(view==="logs")renderLogs();
   if(view==="diagnostics")refreshDiagnostics();
   if(view==="settings")fillSettings();
+  if(view==="audio"){fillAudioSettingsUI();refreshAudioDevices(true);}
+  if(view==="preview")fillMediaSelects();
   if(view==="live"){initLiveNotes();const source=$("newsSourceSelect").value;if(!newsItems.length||newsLoadedSource!==source||Date.now()-newsLoadedAt>180000)loadNews();}
   if(view==="visual"){restoreObsAddress();renderObsScenes();}
 }
@@ -302,7 +438,7 @@ function drawLibrary(){
   $("count");
   const body=$("libraryList");
   if(!rows.length){body.innerHTML='<tr><td colspan="5" class="empty-cell">'+(media.length?"Nenhum arquivo corresponde à pesquisa.":"Importe arquivos de áudio para começar.")+'</td></tr>';drawCarts();fillMediaSelects();return;}
-  body.innerHTML=rows.map(m=>'<tr><td><div class="media-title"><span class="file-glyph">♫</span><span><b title="'+escapeHtml(m.name)+'">'+escapeHtml(m.name)+'</b><small>'+bytesLabel(m.size)+' · arquivo local</small></span></div></td><td>'+categorySelect(m)+'</td><td>'+fmt(m.duration)+'</td><td>'+bytesLabel(m.size)+'</td><td><div class="row-actions"><button class="btn btn-quiet btn-small" data-media-play="'+m.id+'">▶ Tocar</button><button class="btn btn-quiet btn-small" data-media-queue="'+m.id+'">＋ Fila</button><button class="icon-button" data-media-delete="'+m.id+'" title="Excluir">×</button></div></td></tr>').join("");
+  body.innerHTML=rows.map(m=>'<tr><td><div class="media-title"><span class="file-glyph">♫</span><span><b title="'+escapeHtml(m.name)+'">'+escapeHtml(m.name)+'</b><small>'+bytesLabel(m.size)+' · arquivo local</small></span></div></td><td>'+categorySelect(m)+'</td><td>'+fmt(m.duration)+'</td><td>'+bytesLabel(m.size)+'</td><td><div class="row-actions"><button class="btn btn-quiet btn-small" data-media-preview="'+m.id+'">Pré-escuta</button><button class="btn btn-quiet btn-small" data-media-play="'+m.id+'">▶ No ar</button><button class="btn btn-quiet btn-small" data-media-queue="'+m.id+'">＋ Fila</button><button class="icon-button" data-media-delete="'+m.id+'" title="Excluir">×</button></div></td></tr>').join("");
   drawCarts();
   fillMediaSelects();
 }
@@ -376,7 +512,7 @@ function processJingleRotationAfterTrack(){
   refreshJingleRotationUI();persistState();
 }
 function fillMediaSelects(){
-  const schedule=$("scheduleMedia"), campaign=$("campaignMedia");
+  const schedule=$("scheduleMedia"), campaign=$("campaignMedia"), preview=$("previewMediaSelect");
   if(schedule){
     const currentValue=schedule.value;
     schedule.innerHTML='<option value="">Selecione um áudio…</option>'+media.map(m=>'<option value="'+m.id+'">'+escapeHtml(m.name)+' · '+CATEGORY_LABELS[m.type]+'</option>').join("");
@@ -387,6 +523,12 @@ function fillMediaSelects(){
     const spots=media.filter(m=>m.type==="spot");
     campaign.innerHTML='<option value="">Selecione um comercial…</option>'+spots.map(m=>'<option value="'+m.id+'">'+escapeHtml(m.name)+'</option>').join("");
     if(spots.some(m=>m.id===currentValue))campaign.value=currentValue;
+  }
+  if(preview){
+    const currentValue=preview.value||(previewCurrent&&previewCurrent.id)||"";
+    preview.innerHTML='<option value="">Selecione uma faixa para ouvir…</option>'+media.slice().sort((a,b)=>a.name.localeCompare(b.name,"pt-BR")).map(m=>'<option value="'+escapeHtml(m.id)+'">'+escapeHtml(m.name)+' · '+escapeHtml(CATEGORY_LABELS[m.type]||m.type)+'</option>').join("");
+    if(findMedia(currentValue))preview.value=currentValue;
+    else if(previewCurrent&&!findMedia(previewCurrent.id))loadPreviewMedia(null);
   }
 }
 function drawSchedules(){
@@ -444,10 +586,8 @@ function play(m,source="manual"){
   if(!m)return;
   if(activeSession)finishSession("interrompida");
   mainAudio.pause();
-  if(currentCart){
-    if(!cartDuckApplied){mainVolumeBeforeCart=1;cartDuckApplied=true;}
-    mainAudio.volume=Math.min(mainVolumeBeforeCart,0.30);
-  }else mainAudio.volume=1;
+  if(currentCart){mainVolumeBeforeCart=volumePercent("mainVolume",100)/100;cartDuckApplied=true;mainAudio.volume=Math.min(mainVolumeBeforeCart,0.30);}
+  else{cartDuckApplied=false;mainAudio.volume=volumePercent("mainVolume",100)/100;}
   current=m;
   pendingSource=source;
   mainAudio.src=m.url;
@@ -470,7 +610,7 @@ function play(m,source="manual"){
 }
 function next(){
   clearInterval(fadeTimer);
-  mainAudio.volume=currentCart?(cartDuckApplied?Math.min(mainVolumeBeforeCart,0.30):1):1;
+  applyAudioVolumes();
   if(queue.length){
     const m=queue.shift();
     persistState();drawQueue();
@@ -488,7 +628,7 @@ function stopPlayback(reason="Parada manual."){
   if(activeSession)finishSession("interrompida");
   mainAudio.pause();
   mainAudio.currentTime=0;
-  mainAudio.volume=1;
+  applyAudioVolumes();
   $("playBtn").textContent="▶";
   setPlayState("PARADO");
   setStatus("SISTEMA PRONTO");
@@ -517,7 +657,7 @@ function fadeNext(){
     step++;
     mainAudio.volume=Math.max(0,start*(1-step/steps));
     if(step>=steps){
-      clearInterval(fadeTimer);fadeTimer=null;mainAudio.volume=currentCart?(cartDuckApplied?Math.min(mainVolumeBeforeCart,0.30):1):1;$("fadeBtn").disabled=false;
+      clearInterval(fadeTimer);fadeTimer=null;applyAudioVolumes();$("fadeBtn").disabled=false;
       if(activeSession)finishSession("fade-out");
       next();
     }
@@ -539,6 +679,7 @@ async function initializeMeter(){
       meterNodes.forEach(n=>n.gain.value=0);
       analyzers.forEach((a,i)=>{splitter.connect(a,i);a.connect(meterNodes[i]);meterNodes[i].connect(audioContext.destination);});
     }
+    await applyAudioOutput("main",settings.mainOutput||"",false);
     await audioContext.resume();
     $("audioContextState").textContent="RMS L/R ATIVO";
     if(meterTimer)clearInterval(meterTimer);
@@ -620,6 +761,7 @@ async function removeMedia(id){
   if(!window.confirm("Remover "+m.name+" do armazenamento local?"))return;
   if(currentCart&&currentCart.id===id)stopCartPlayback(true);
   if(current&&current.id===id){stopPlayback("Faixa removida.");current=null;}
+  if(previewCurrent&&previewCurrent.id===id)loadPreviewMedia(null);
   media=media.filter(x=>x.id!==id);queue=queue.filter(x=>x.id!==id);
   schedules=schedules.filter(x=>x.mediaId!==id);campaigns=campaigns.filter(x=>x.mediaId!==id);
   cartSlots=cartSlots.map(slotId=>slotId===id?null:slotId);
@@ -674,6 +816,7 @@ function fillSettings(){
   $("stationNameInput").value=settings.stationName||"";
   $("stationFrequencyInput").value=settings.frequency||"";
   $("timezoneInput").value=settings.timezone||"America/Sao_Paulo";
+  fillAudioSettingsUI();
 }
 function csvEscape(v){return '"'+String(v==null?"":v).replace(/"/g,'""')+'"';}
 function download(name,content,type){
@@ -702,7 +845,7 @@ async function restoreBackup(file){
 }
 async function deleteAllMedia(){
   if(!window.confirm("Isto remove todos os áudios armazenados neste navegador e seus agendamentos/campanhas. Continuar?"))return;
-  stopPlayback("Biblioteca removida.");
+  stopPlayback("Biblioteca removida.");stopPreview();loadPreviewMedia(null);
   if(currentCart)stopCartPlayback(true);
   current=null;
   for(const url of urlSet)URL.revokeObjectURL(url);
@@ -717,7 +860,7 @@ function setCartStatus(text,active=false){
   if($("stopCartBtn"))$("stopCartBtn").disabled=!active;
 }
 function restoreMainVolume(){
-  if(cartDuckApplied){mainAudio.volume=mainVolumeBeforeCart;cartDuckApplied=false;}
+  cartDuckApplied=false;applyAudioVolumes();
   setCartStatus("SEM DISPARO",false);
   if($("cartDuckingLabel"))$("cartDuckingLabel").textContent="Áudio de apoio";
 }
@@ -729,7 +872,7 @@ function stopCartPlayback(write=true){
 function playCart(m,source="cartwall"){
   if(!m)return;if(currentCart)stopCartPlayback(true);else restoreMainVolume();
   currentCart={id:m.id,name:m.name,type:m.type,source};
-  if(!mainAudio.paused&&!mainAudio.ended){mainVolumeBeforeCart=mainAudio.volume;mainAudio.volume=Math.min(mainVolumeBeforeCart,0.30);cartDuckApplied=true;$("cartDuckingLabel").textContent="Programa atenuado";}
+  if(!mainAudio.paused&&!mainAudio.ended){mainVolumeBeforeCart=volumePercent("mainVolume",100)/100;mainAudio.volume=Math.min(mainVolumeBeforeCart,0.30);cartDuckApplied=true;$("cartDuckingLabel").textContent="Programa atenuado";}
   else $("cartDuckingLabel").textContent="Sem programa principal";
   $("cartNowLabel").textContent=m.name;setCartStatus("DISPARANDO",true);drawCarts();cartAudio.src=m.url;cartAudio.currentTime=0;cartAudio.load();
   writeLog("cart-start","Cartwall: "+m.name,{mediaId:m.id,title:m.name,type:m.type,source,result:"disparo iniciado"});
@@ -826,6 +969,8 @@ function bindEvents(){
   $("obsConnectBtn").addEventListener("click",connectObs);$("obsDisconnectBtn").addEventListener("click",()=>disconnectObs(true));$("stopCartBtn").addEventListener("click",()=>stopCartPlayback(true));
   document.addEventListener("click",e=>{
     const goto=e.target.closest("[data-go]");if(goto)showView(goto.dataset.go);
+    const previewButton=e.target.closest("[data-media-preview]");
+    if(previewButton){const item=findMedia(previewButton.dataset.mediaPreview);if(item){showView("preview");fillMediaSelects();$("previewMediaSelect").value=item.id;loadPreviewMedia(item);}return;}
     const newsUse=e.target.closest("[data-news-use]");if(newsUse){addNewsToNotes(newsUse.dataset.newsUse);return;}
     const obsScene=e.target.closest("[data-obs-scene]");if(obsScene){setObsProgramScene(obsScene.dataset.obsScene);return;}
     const slotFire=e.target.closest("[data-cart-slot-play]");
@@ -881,6 +1026,28 @@ function bindEvents(){
     jingleRotation.every=Math.max(2,Math.min(12,Number(e.target.value)||3));refreshJingleRotationUI();await persistState();
     showToast("Vinheta automática configurada a cada "+jingleRotation.every+" músicas.");
   });
+  $("previewMediaSelect").addEventListener("change",()=>loadPreviewMedia(findMedia($("previewMediaSelect").value)));
+  $("previewPlayBtn").addEventListener("click",togglePreview);
+  $("previewStopBtn").addEventListener("click",stopPreview);
+  previewAudio.addEventListener("timeupdate",updatePreviewProgress);
+  previewAudio.addEventListener("loadedmetadata",updatePreviewProgress);
+  previewAudio.addEventListener("play",()=>{$("previewState").textContent="OUVINDO";$("previewState").classList.add("playing");$("previewPlayBtn").textContent="Ⅱ Pausar pré-escuta";});
+  previewAudio.addEventListener("pause",()=>{
+    $("previewState").classList.remove("playing");
+    if(previewCurrent&&previewAudio.currentTime>0.01){$("previewState").textContent="PAUSADO";$("previewPlayBtn").textContent="▶ Continuar pré-escuta";}
+    else{$("previewState").textContent=previewCurrent?"PRONTO":"PARADO";$("previewPlayBtn").textContent="▶ Iniciar pré-escuta";}
+  });
+  previewAudio.addEventListener("ended",()=>{$("previewState").textContent="FIM DA FAIXA";$("previewState").classList.remove("playing");$("previewPlayBtn").textContent="▶ Ouvir novamente";updatePreviewProgress();});
+  previewAudio.addEventListener("error",()=>{if(previewCurrent)showToast("Não foi possível carregar a faixa de pré-escuta.",true);});
+  $("refreshAudioDevices").addEventListener("click",()=>refreshAudioDevices(false));
+  $("chooseAudioOutput").addEventListener("click",chooseAudioOutput);
+  for(const [id,key] of [["mainVolumeSlider","mainVolume"],["cartVolumeSlider","cartVolume"],["previewVolumeSlider","previewVolume"]]){
+    $(id).addEventListener("input",()=>{settings[key]=Number($(id).value);applyAudioVolumes();});
+    $(id).addEventListener("change",async()=>{settings[key]=Number($(id).value);applyAudioVolumes();await persistState();});
+  }
+  for(const [id,key,channel] of [["mainOutputSelect","mainOutput","main"],["cartOutputSelect","cartOutput","cart"],["previewOutputSelect","previewOutput","preview"]]){
+    $(id).addEventListener("change",async()=>{settings[key]=$(id).value||"";await applyAudioOutput(channel,settings[key],true);await persistState();});
+  }
   $("search").addEventListener("input",drawLibrary);
   document.querySelectorAll("[data-filter]").forEach(b=>b.addEventListener("click",()=>{
     filter=b.dataset.filter;document.querySelectorAll("[data-filter]").forEach(x=>x.classList.toggle("active",x===b));drawLibrary();
@@ -922,8 +1089,8 @@ function bindEvents(){
     await persistState();drawCampaigns();e.target.reset();$("campaignTime").value="12:00";fillMediaSelects();showToast("Campanha local cadastrada.");writeLog("system","Campanha criada: "+name,{title:m.name,result:"ativa"});
   });
   $("settingsForm").addEventListener("submit",async e=>{
-    e.preventDefault();settings={stationName:$("stationNameInput").value.trim()||"Emissora",frequency:$("stationFrequencyInput").value.trim(),timezone:$("timezoneInput").value};
-    await persistState();renderStation();showToast("Configurações da emissora salvas neste navegador.");writeLog("system","Configurações da emissora alteradas",{result:"salvas"});
+    e.preventDefault();settings={...settings,stationName:$("stationNameInput").value.trim()||"Emissora",frequency:$("stationFrequencyInput").value.trim(),timezone:$("timezoneInput").value};
+    await persistState();renderStation();drawClock();await syncClock();showToast("Configurações da emissora salvas neste navegador.");writeLog("system","Configurações da emissora alteradas",{result:"salvas"});
   });
   $("settingsShortcut").addEventListener("click",()=>showView("settings"));
   $("exportCsv").addEventListener("click",()=>{
@@ -969,7 +1136,7 @@ function bindEvents(){
 }
 async function init(){
   bindEvents();restoreObsAddress();initLiveNotes();setObsStatus("DESCONECTADO","disconnected");
-  drawClock();setInterval(drawClock,1000);
+  drawClock();setInterval(drawClock,1000);setInterval(syncClock,60000);
   setInterval(scheduleTick,1000);
   refreshMode();
   try{
@@ -980,14 +1147,14 @@ async function init(){
     $("diagStorage").textContent="Indisponível";
     showToast("O navegador não permitiu abrir a biblioteca persistente: "+err.message,true);
   }
-  renderEverything();fillSettings();fillMediaSelects();
+  renderEverything();fillSettings();fillMediaSelects();applyAudioVolumes();await refreshAudioDevices(true);await syncClock();
   const today=localDateKey(now());
   $("campaignStart").value=today;$("campaignEnd").value=today;
   await refreshDiagnostics();
   writeLog("system","Console Qolan Studio iniciado",{result:"pronto"});
 }
 window.addEventListener("beforeunload",()=>{
-  clearInterval(meterTimer);clearInterval(fadeTimer);try{cartAudio.pause();}catch(_){}try{if(obsSocket)disconnectObs(false);}catch(_){}
+  clearInterval(meterTimer);clearInterval(fadeTimer);try{cartAudio.pause();}catch(_){}try{previewAudio.pause();}catch(_){}try{if(obsSocket)disconnectObs(false);}catch(_){}
   for(const url of urlSet)URL.revokeObjectURL(url);
 });
 init();

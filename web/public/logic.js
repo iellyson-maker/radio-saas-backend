@@ -55,7 +55,8 @@
   if(!isObject(payload)||payload.product!=="Qolan Studio"||payload.schemaVersion!==1)throw new Error("Este arquivo não é um backup compatível do Qolan Studio.");
   const defaults={stationName:"Rádio Central",frequency:"98.7 FM",timezone:"America/Sao_Paulo"};
   const raw=isObject(payload.settings)?payload.settings:{};
-  const settings={stationName:cleanString(raw.stationName,100,defaults.stationName)||defaults.stationName,frequency:cleanString(raw.frequency,50,defaults.frequency),timezone:isValidTimeZone(raw.timezone)?raw.timezone:defaults.timezone};
+  const cleanVolume=(value,fallback)=>Number.isFinite(Number(value))?Math.max(0,Math.min(100,Math.round(Number(value)))):fallback;
+  const settings={stationName:cleanString(raw.stationName,100,defaults.stationName)||defaults.stationName,frequency:cleanString(raw.frequency,50,defaults.frequency),timezone:isValidTimeZone(raw.timezone)?raw.timezone:defaults.timezone,mainVolume:cleanVolume(raw.mainVolume,100),cartVolume:cleanVolume(raw.cartVolume,75),previewVolume:cleanVolume(raw.previewVolume,65),mainOutput:"",cartOutput:"",previewOutput:""};
   for(const key of ["schedules","campaigns","logs","queueIds","cartSlots"])if(payload[key]!==undefined&&!Array.isArray(payload[key]))throw new Error("Campo inválido no backup: "+key+".");
   if(payload.jingleRotation!==undefined&&!isObject(payload.jingleRotation))throw new Error("Campo inválido no backup: jingleRotation.");
   const ss=payload.schedules||[],cc=payload.campaigns||[],ll=payload.logs||[],qq=payload.queueIds||[],cs=payload.cartSlots||[];

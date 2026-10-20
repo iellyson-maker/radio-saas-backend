@@ -1448,3 +1448,67 @@ table tbody tr:hover {background:rgba(48,104,136,.12)}
 @media (prefers-reduced-motion:reduce) {
   *,*::before,*::after {scroll-behavior:auto!important;transition:none!important;animation:none!important}
 }
+
+
+/* Cartwall personalization: per-slot label and interior color editor */
+.studio-cart-panel .cart-pad.is-customized:not(.is-playing) {
+  background:var(--pad-custom-bg,var(--pad-bg,#182227));
+  border-color:color-mix(in srgb,var(--pad-custom-bg,#243644) 75%,#9dc8db);
+  border-top-color:var(--pad-accent,#40535a);
+}
+.studio-cart-panel .cart-pad.is-customized:not(.is-playing):hover {
+  background:color-mix(in srgb,var(--pad-custom-bg,#243644) 86%,white);
+}
+.studio-cart-panel .cart-pad.is-customized .cart-pad-name {color:var(--pad-custom-text,#edf4f6)}
+.studio-cart-panel .cart-pad.is-customized .cart-pad-meta,
+.studio-cart-panel .cart-pad.is-customized .cart-pad-meta span:last-child {color:var(--pad-custom-muted,#b3c4c8)}
+.studio-cart-panel .cart-pad.is-customized .cart-pad-number {border-color:color-mix(in srgb,var(--pad-custom-muted,#b3c4c8) 50%,transparent)}
+.studio-cart-panel .cart-pad.is-customized .cart-pad-action {color:var(--pad-custom-text,#edf4f6);border-color:color-mix(in srgb,var(--pad-custom-text,#edf4f6) 25%,transparent)}
+.cart-pad-tools button[data-cart-slot-edit] {color:#8fdef4}
+.cart-pad-tools button[data-cart-slot-edit]:hover {color:#d8f8ff;background:rgba(62,167,204,.14)}
+.cart-custom-dialog {
+  width:min(530px,calc(100vw - 28px));
+  max-width:calc(100vw - 28px);
+  max-height:calc(100dvh - 28px);
+  overflow:auto;
+  padding:0;
+  border:1px solid #42647b;
+  border-radius:14px;
+  color:#eaf6ff;
+  background:linear-gradient(145deg,#152b3d 0%,#0c1723 78%);
+  box-shadow:0 24px 90px rgba(0,0,0,.65),inset 0 1px 0 rgba(255,255,255,.07);
+}
+.cart-custom-dialog::backdrop {background:rgba(2,8,14,.78);backdrop-filter:blur(5px)}
+.cart-custom-dialog form {display:flex;flex-direction:column;gap:17px;padding:22px}
+.cart-editor-heading {display:flex;align-items:center;justify-content:space-between;gap:12px}
+.cart-editor-kicker {color:#72cde8;font-size:9px;font-weight:900;letter-spacing:1.6px}
+.cart-editor-close {display:grid;place-items:center;width:31px;height:31px;padding:0;border-color:#355267;border-radius:8px;font-size:21px}
+.cart-editor-title-row {display:flex;align-items:center;gap:12px}
+.cart-editor-slot-number {display:grid;place-items:center;width:49px;height:49px;flex:0 0 49px;border:1px solid #3d708a;border-radius:9px;color:#9eecff;background:linear-gradient(145deg,#21485c,#112c3f);font:850 18px "Consolas",monospace;box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 0 18px rgba(72,191,231,.08)}
+.cart-editor-title-row h2 {margin:0;color:#f2faff;font-size:19px;letter-spacing:-.3px}
+.cart-editor-title-row p {margin:4px 0 0;color:#8faec1;font-size:10px;line-height:1.5}
+.cart-editor-preview {display:flex;flex-direction:column;gap:5px;min-height:108px;padding:13px 15px;border:1px solid rgba(156,217,239,.32);border-top:3px solid #65d8f0;border-radius:8px;color:#f2faff;background:#19372f;box-shadow:inset 0 1px 0 rgba(255,255,255,.07),inset 0 -18px 25px rgba(0,0,0,.1)}
+.cart-editor-preview-number {align-self:flex-start;padding:3px 6px;border:1px solid currentColor;border-radius:4px;font:800 9px "Consolas",monospace;opacity:.72}
+.cart-editor-preview-caption {font-size:7px;font-weight:900;letter-spacing:1.1px;opacity:.7}
+.cart-editor-preview b {font-size:16px;line-height:1.35;overflow-wrap:anywhere}
+.cart-editor-preview small {margin-top:auto;font-size:8px;font-weight:900;letter-spacing:1px;opacity:.72}
+.cart-editor-field {display:flex;flex-direction:column;gap:7px;color:#c6dce9;font-size:11px;font-weight:800;letter-spacing:.35px}
+.cart-editor-field input[type="text"] {width:100%;height:41px;padding:0 12px;border:1px solid #38576d;border-radius:7px;color:#ecf8ff;background:#0a1825;font-size:12px;font-weight:500;letter-spacing:0}
+.cart-editor-field input[type="text"]:focus {border-color:#5bcdeb;box-shadow:0 0 0 3px rgba(91,205,235,.11)}
+.cart-editor-color-row {display:flex;align-items:center;justify-content:space-between;gap:18px}
+.cart-editor-color-label span {display:block;margin-top:1px;color:#7699af;font-size:9px;font-weight:500;letter-spacing:0}
+.cart-editor-color-row input[type="color"] {width:62px;height:44px;flex:0 0 62px;padding:4px;border:1px solid #3e6076;border-radius:8px;background:#102333;cursor:pointer}
+.cart-color-presets {display:flex;flex-wrap:wrap;gap:9px}
+.cart-color-presets button {width:31px;height:31px;padding:0;border:2px solid #56758a;border-radius:50%;background:var(--swatch);box-shadow:inset 0 1px 0 rgba(255,255,255,.3),0 3px 8px rgba(0,0,0,.2)}
+.cart-color-presets button:hover,.cart-color-presets button:focus-visible {border-color:#e4f9ff;box-shadow:0 0 0 3px rgba(89,206,238,.18)}
+.cart-editor-actions {display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:14px;border-top:1px solid #2a4356}
+.cart-editor-actions>div {display:flex;gap:8px}
+.cart-editor-actions .btn {min-height:38px;border-radius:7px}
+.cart-editor-actions #cartSlotResetBtn {color:#99b5c6}
+@media (max-width:520px) {
+  .cart-custom-dialog form {padding:17px;gap:14px}
+  .cart-editor-title-row h2 {font-size:16px}
+  .cart-editor-actions {align-items:stretch;flex-direction:column}
+  .cart-editor-actions>div {justify-content:flex-end}
+  .cart-editor-actions #cartSlotResetBtn {align-self:flex-start}
+}

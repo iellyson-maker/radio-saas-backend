@@ -11,7 +11,7 @@
     .view { display: none; }
     .view.active { display: block; }
   </style>
-  <link rel="stylesheet" href="/styles.css?v=0.9.0">
+  <link rel="stylesheet" href="/styles.css?v=0.10.0">
 </head>
 <body>
 <div class="shell">
@@ -38,7 +38,7 @@
       <button class="nav-item" data-view="diagnostics"><span class="nav-icon">⌁</span> Diagnóstico</button>
       <button class="nav-item" data-view="settings"><span class="nav-icon">⚙</span> Configurações</button>
     </nav>
-    <div class="sidebar-bottom"><div class="version-row"><span>QOLAN WEB</span><b>0.9.0</b></div><p>Versão web de avaliação. Não é um motor de transmissão 24/7.</p></div>
+    <div class="sidebar-bottom"><div class="version-row"><span>QOLAN WEB</span><b>0.10.0</b></div><p>Versão web de avaliação. Não é um motor de transmissão 24/7.</p></div>
   </aside>
 
   <div class="work-area">
@@ -330,11 +330,45 @@
         </div>
       </section>
     </main>
-    <footer class="global-footer"><span>QOLAN STUDIO WEB 0.9.0</span><span id="storageFooter">Preparando armazenamento local…</span><span>Console de avaliação · sem transmissão contínua</span></footer>
+    <footer class="global-footer"><span>QOLAN STUDIO WEB 0.10.0</span><span id="storageFooter">Preparando armazenamento local…</span><span>Console de avaliação · sem transmissão contínua</span></footer>
   </div>
 </div>
+<dialog id="cartSlotEditor" class="cart-custom-dialog" aria-labelledby="cartSlotEditorTitle">
+  <form id="cartSlotEditorForm">
+    <div class="cart-editor-heading">
+      <span class="cart-editor-kicker">QOLAN STUDIO / CARTWALL</span>
+      <button type="button" class="cart-editor-close" id="cartSlotCancelTop" aria-label="Fechar editor">×</button>
+    </div>
+    <div class="cart-editor-title-row">
+      <span class="cart-editor-slot-number" id="cartSlotEditorNumber">01</span>
+      <div><h2 id="cartSlotEditorTitle">Personalizar cartucho</h2><p id="cartSlotEditorSubtitle">Defina o nome e a cor interna desta posição.</p></div>
+    </div>
+    <div class="cart-editor-preview" id="cartSlotEditorPreview">
+      <span class="cart-editor-preview-number">01</span><span class="cart-editor-preview-caption">PRÉVIA DO CARTUCHO</span><b id="cartSlotEditorPreviewName">Novo cartucho</b><small>APERTE PARA DISPARAR</small>
+    </div>
+    <label class="cart-editor-field">Nome no cartucho <input id="cartSlotLabelInput" type="text" maxlength="40" placeholder="Use o nome original do áudio"></label>
+    <div class="cart-editor-color-row">
+      <label for="cartSlotColorInput" class="cart-editor-field cart-editor-color-label">Cor interna <span>Escolha a cor do fundo do cartucho.</span></label>
+      <input id="cartSlotColorInput" type="color" value="#19372f" aria-label="Selecionar cor interna do cartucho">
+    </div>
+    <div class="cart-color-presets" aria-label="Cores rápidas">
+      <button type="button" data-cart-color-preset="#19372f" style="--swatch:#19372f" aria-label="Verde profundo" title="Verde profundo"></button>
+      <button type="button" data-cart-color-preset="#192f43" style="--swatch:#192f43" aria-label="Azul" title="Azul"></button>
+      <button type="button" data-cart-color-preset="#29213d" style="--swatch:#29213d" aria-label="Violeta" title="Violeta"></button>
+      <button type="button" data-cart-color-preset="#35291b" style="--swatch:#35291b" aria-label="Âmbar" title="Âmbar"></button>
+      <button type="button" data-cart-color-preset="#38212a" style="--swatch:#38212a" aria-label="Vinho" title="Vinho"></button>
+      <button type="button" data-cart-color-preset="#173438" style="--swatch:#173438" aria-label="Turquesa" title="Turquesa"></button>
+      <button type="button" data-cart-color-preset="#222b48" style="--swatch:#222b48" aria-label="Índigo" title="Índigo"></button>
+      <button type="button" data-cart-color-preset="#3b2925" style="--swatch:#3b2925" aria-label="Terracota" title="Terracota"></button>
+    </div>
+    <div class="cart-editor-actions">
+      <button type="button" class="btn btn-quiet" id="cartSlotResetBtn">Restaurar padrão</button>
+      <div><button type="button" class="btn btn-quiet" id="cartSlotCancelBtn">Cancelar</button><button type="submit" class="btn btn-primary" id="cartSlotSaveBtn">Salvar cartucho</button></div>
+    </div>
+  </form>
+</dialog>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
-<script src="/logic.js?v=0.9.0"></script>
-<script src="/app.js?v=0.9.0"></script>
+<script src="/logic.js?v=0.10.0"></script>
+<script src="/app.js?v=0.10.0"></script>
 </body>
 </html>

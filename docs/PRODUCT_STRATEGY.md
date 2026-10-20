@@ -175,3 +175,12 @@ A mudança de linguagem visual inspira-se nos princípios divulgados para cockpi
 - Cartuchos tratados como teclas iluminadas de ação direta, preservando sua cor de categoria e realçando o cartucho em disparo.
 - Painéis com efeito glass/digital instrument, bordas e gradientes discretos, medidores de áudio e roteiro de veiculação integrados ao mesmo design system.
 - Escopo visual: a mudança não simula dados de voo nem altera a lógica de reprodução, fila, cartwall, pré-escuta ou roteamento de áudio.
+
+
+## Qolan Studio 0.10.0 — cartuchos personalizáveis
+
+- Cada um dos 12 slots possui editor de personalização acessível pelo botão “Personalizar”, inclusive antes de carregar um arquivo.
+- O nome exibido pode ser personalizado por posição, sem alterar o nome original do arquivo na Biblioteca.
+- A cor interna pode ser escolhida por seletor de cor ou amostras rápidas, com contraste de texto adaptado para cores claras/escuras. A cor da posição e o realce de reprodução continuam separados.
+- As preferências são persistidas no estado local e incluídas nos backups JSON. A restauração sanitiza o texto (com escape ao renderizar) e aceita somente cores hexadecimais `#RRGGBB`.
+- O botão “Restaurar padrão” remove o nome e a cor personalizada daquela posição; esvaziar/trocar o áudio não apaga as preferências do slot.

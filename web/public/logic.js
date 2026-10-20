@@ -57,10 +57,10 @@
   const raw=isObject(payload.settings)?payload.settings:{};
   const cleanVolume=(value,fallback)=>Number.isFinite(Number(value))?Math.max(0,Math.min(100,Math.round(Number(value)))):fallback;
   const settings={stationName:cleanString(raw.stationName,100,defaults.stationName)||defaults.stationName,frequency:cleanString(raw.frequency,50,defaults.frequency),timezone:isValidTimeZone(raw.timezone)?raw.timezone:defaults.timezone,mainVolume:cleanVolume(raw.mainVolume,100),cartVolume:cleanVolume(raw.cartVolume,75),previewVolume:cleanVolume(raw.previewVolume,65),mainOutput:"",cartOutput:"",previewOutput:""};
-  for(const key of ["schedules","campaigns","logs","queueIds","cartSlots"])if(payload[key]!==undefined&&!Array.isArray(payload[key]))throw new Error("Campo inválido no backup: "+key+".");
+  for(const key of ["schedules","campaigns","logs","queueIds","cartSlots","cartSlotPrefs"])if(payload[key]!==undefined&&!Array.isArray(payload[key]))throw new Error("Campo inválido no backup: "+key+".");
   if(payload.jingleRotation!==undefined&&!isObject(payload.jingleRotation))throw new Error("Campo inválido no backup: jingleRotation.");
-  const ss=payload.schedules||[],cc=payload.campaigns||[],ll=payload.logs||[],qq=payload.queueIds||[],cs=payload.cartSlots||[];
-  if(ss.length>500||cc.length>500||ll.length>500||qq.length>2000||cs.length>24)throw new Error("O backup excede o limite de registros permitido.");
+  const ss=payload.schedules||[],cc=payload.campaigns||[],ll=payload.logs||[],qq=payload.queueIds||[],cs=payload.cartSlots||[],cp=payload.cartSlotPrefs||[];
+  if(ss.length>500||cc.length>500||ll.length>500||qq.length>2000||cs.length>24||cp.length>24)throw new Error("O backup excede o limite de registros permitido.");
   const schedules=[];
   for(const s of ss){
    if(!isObject(s))continue;
@@ -85,6 +85,7 @@
   const known=new Set(Array.from(availableMediaIds||[]).filter(x=>typeof x==="string"));
   const queueIds=qq.filter(x=>typeof x==="string"&&known.has(x)).slice(0,2000);
   const cartSlots=normalizeCartSlots(cs,12).map(id=>typeof id==="string"&&known.has(id)?id:null);
+  const cartSlotPrefs=normalizeCartSlotPrefs(cp,12);
   const rotation=isObject(payload.jingleRotation)?payload.jingleRotation:{};
   const jingleRotation={
     enabled:rotation.enabled===true,
@@ -92,7 +93,16 @@
     counter:Math.max(0,Math.min(1000,Math.floor(Number(rotation.counter)||0))),
     index:Math.max(0,Math.min(100000,Math.floor(Number(rotation.index)||0)))
   };
-  return {settings,schedules,campaigns,logs,queueIds,cartSlots,jingleRotation};
+  return {settings,schedules,campaigns,logs,queueIds,cartSlots,cartSlotPrefs,jingleRotation};
+ }
+ function normalizeCartSlotPrefs(prefs=[],size=12){
+  const count=Math.max(1,Math.min(24,Number(size)||12));
+  return Array.from({length:count},(_,i)=>{
+   const item=isObject(prefs[i])?prefs[i]:{};
+   const label=cleanString(item.label,40);
+   const color=typeof item.color==="string"&&/^#[0-9a-f]{6}$/i.test(item.color)?item.color.toLowerCase():"";
+   return {label,color};
+  });
  }
  function normalizeCartSlots(slots=[],size=12){
   const raw=Array.from({length:Math.max(1,Math.min(24,Number(size)||12))},(_,i)=>typeof slots[i]==="string"&&slots[i]?slots[i]:null);
@@ -123,5 +133,5 @@
   if(hasJingles)return {counter:0,insert:true,every};
   return {counter:next,insert:false,every};
  }
- return {isValidTimeZone,stationClockParts,collectDueItems,normalizeBackup,normalizeCartSlots,fillEmptyCartSlots,advanceJingleRotation};
+ return {isValidTimeZone,stationClockParts,collectDueItems,normalizeBackup,normalizeCartSlotPrefs,normalizeCartSlots,fillEmptyCartSlots,advanceJingleRotation};
 });

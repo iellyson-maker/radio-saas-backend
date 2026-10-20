@@ -306,11 +306,73 @@ function drawLibrary(){
   fillMediaSelects();
 }
 function drawCarts(){
-  const rows=media.filter(m=>(cartFilter==="all"||m.type===cartFilter)&&["jingle","spot","track"].includes(m.type)).sort((a,b)=>a.name.localeCompare(b.name,"pt-BR"));
-  const el=$("cartList");
-  if(!rows.length){el.className="cart-grid empty-state";el.textContent="Importe vinhetas, comerciais ou trilhas para montar a cartucheira.";return;}
+  const el=$("cartList");if(!el)return;
+  cartSlots=core.normalizeCartSlots(cartSlots,CART_SLOT_COUNT);
+  const loaded=cartSlots.filter(id=>id&&findMedia(id)).length;
+  $("cartSlotCount").textContent=loaded+"/"+CART_SLOT_COUNT;
+  const html=[];
+  for(let i=0;i<CART_SLOT_COUNT;i++){
+    const id=cartSlots[i],m=id?findMedia(id):null;
+    const visible=m&&(cartFilter==="all"||m.type===cartFilter);
+    const key=i<9?"F"+(i+1):"—";
+    if(m&&visible){
+      const category=m.type==="spot"?"COMERCIAL":m.type==="track"?"TRILHA":"VINHETA";
+      const playing=currentCart&&currentCart.id===m.id;
+      html.push('<article class="cart-pad is-loaded '+(m.type==="spot"?"type-spot":m.type==="track"?"type-track":"type-jingle")+' '+(playing?"is-playing":"")+'" data-slot="'+i+'">'+
+        '<button type="button" class="cart-pad-fire" data-cart-slot-play="'+i+'" aria-label="Disparar '+escapeHtml(m.name)+'">'+
+        '<span class="cart-pad-top"><span class="cart-pad-number">'+String(i+1).padStart(2,"0")+'</span><span class="cart-pad-hotkey">'+key+'</span></span>'+
+        '<span class="cart-pad-icon">'+(m.type==="spot"?"◉":m.type==="track"?"♫":"✳")+'</span>'+
+        '<span class="cart-pad-name" title="'+escapeHtml(m.name)+'">'+escapeHtml(m.name)+'</span>'+
+        '<span class="cart-pad-meta"><span>'+category+'</span><span>'+fmt(m.duration)+'</span></span></button>'+
+        '<div class="cart-pad-tools"><button type="button" data-cart-slot-load="'+i+'" title="Trocar áudio deste slot">Trocar</button><button type="button" data-cart-slot-clear="'+i+'" title="Esvaziar slot" aria-label="Esvaziar slot">×</button></div></article>');
+    }else if(m){
+      html.push('<article class="cart-pad is-filtered-out '+(m.type==="spot"?"type-spot":m.type==="track"?"type-track":"type-jingle")+'" data-slot="'+i+'"><div class="cart-pad-filtered"><span class="cart-pad-number">'+String(i+1).padStart(2,"0")+'</span><b>'+escapeHtml(m.name)+'</b><small>Filtro: '+escapeHtml(CATEGORY_LABELS[m.type])+'</small></div><div class="cart-pad-tools"><button type="button" data-cart-filter-show="all">Ver todos</button></div></article>');
+    }else{
+      html.push('<article class="cart-pad is-empty" data-slot="'+i+'"><button type="button" class="cart-pad-empty" data-cart-slot-load="'+i+'"><span class="cart-pad-top"><span class="cart-pad-number">'+String(i+1).padStart(2,"0")+'</span><span class="cart-pad-hotkey">'+key+'</span></span><span class="cart-pad-plus">＋</span><b>Carregar áudio</b><small>'+(cartFilter==="all"?"Vinheta, comercial ou trilha":CATEGORY_LABELS[cartFilter])+'</small></button></article>');
+    }
+  }
   el.className="cart-grid";
-  el.innerHTML=rows.map((m,i)=>'<button class="cart-button" data-type="'+m.type+'" data-cart-play="'+m.id+'" title="Disparar '+escapeHtml(m.name)+'"><b>'+escapeHtml(m.name)+'</b><small>F'+(i+1<=9?i+1:"—")+' · '+escapeHtml(CATEGORY_LABELS[m.type])+' · '+fmt(m.duration)+'</small></button>').join("");
+  el.innerHTML=html.join("");
+  refreshJingleRotationUI();
+}
+function getRotationJingles(){
+  const seen=new Set();
+  const assigned=cartSlots.map(id=>findMedia(id)).filter(m=>m&&m.type==="jingle");
+  const rest=media.filter(m=>m.type==="jingle").sort((a,b)=>a.name.localeCompare(b.name,"pt-BR"));
+  return [...assigned,...rest].filter(m=>{if(seen.has(m.id))return false;seen.add(m.id);return true;});
+}
+function refreshJingleRotationUI(){
+  const toggle=$("jingleRotationEnabled"),interval=$("jingleRotationEvery"),status=$("jingleRotationStatus"),detail=$("jingleRotationDetail");
+  if(!toggle||!interval||!status||!detail)return;
+  if(document.activeElement!==toggle)toggle.checked=jingleRotation.enabled===true;
+  if(document.activeElement!==interval)interval.value=String(jingleRotation.every||3);
+  const count=getRotationJingles().length;
+  status.textContent=jingleRotation.enabled?"ATIVA":"DESATIVADA";
+  status.classList.toggle("warning-pill",!jingleRotation.enabled||!count);
+  status.classList.toggle("success-pill",jingleRotation.enabled&&count>0);
+  detail.textContent=count?("Próxima vinheta após "+Math.max(0,jingleRotation.every-jingleRotation.counter)+" música(s) · "+count+" disponível(is)."):"Importe vinhetas para ativar a inserção automática.";
+}
+function processJingleRotationAfterTrack(){
+  if(!current||current.type!=="music"||!jingleRotation.enabled)return;
+  const allJingles=getRotationJingles();
+  const decision=core.advanceJingleRotation(jingleRotation,"music",jingleRotation.counter,allJingles.length>0);
+  jingleRotation.counter=decision.counter;
+  if(decision.insert){
+    const candidates=allJingles.filter(m=>!queue.some(q=>q.id===m.id));
+    if(candidates.length){
+      const selected=candidates[jingleRotation.index%candidates.length];
+      jingleRotation.index=(jingleRotation.index+1)%Math.max(1,allJingles.length);
+      let insertionIndex=0;
+      while(insertionIndex<queue.length&&queue[insertionIndex]._qolanQueueKind==="priority")insertionIndex++;
+      queue.splice(insertionIndex,0,{...selected,_qolanAutomaticJingle:true});
+      writeLog("jingle-rotation","Vinheta automática: "+selected.name,{mediaId:selected.id,title:selected.name,type:"jingle",source:"rotação automática",result:"inserida após eventos prioritários"});
+      drawQueue();showToast("Vinheta inserida automaticamente: "+selected.name);
+    }else{
+      jingleRotation.counter=Math.max(jingleRotation.every,jingleRotation.counter);
+      writeLog("jingle-rotation","Inserção adiada: todas as vinhetas já estão na fila.",{source:"rotação automática",result:"adiada"});
+    }
+  }
+  refreshJingleRotationUI();persistState();
 }
 function fillMediaSelects(){
   const schedule=$("scheduleMedia"), campaign=$("campaignMedia");
@@ -467,7 +529,7 @@ async function initializeMeter(){
     if(!audioContext){
       const Context=window.AudioContext||window.webkitAudioContext;
       audioContext=new Context();
-      mediaSource=audioContext.createMediaElementSource(audio);
+      mediaSource=audioContext.createMediaElementSource(mainAudio);
       splitter=audioContext.createChannelSplitter(2);
       mediaSource.connect(audioContext.destination);
       mediaSource.connect(splitter);
@@ -563,7 +625,7 @@ function scheduleTick(){
   if(!auto||!db)return;
   const due=core.collectDueItems(schedules,campaigns,id=>findMedia(id),now(),settings.timezone);
   if(!due.events.length)return;
-  queue.unshift(...due.events.map(event=>event.media));
+  queue.unshift(...due.events.map(event=>({...event.media,_qolanQueueKind:"priority",_qolanEventKind:event.kind})));
   for(const event of due.events){
     const item=event.item,m=event.media;
     if(event.kind==="schedule")writeLog("scheduled","Evento na fila: "+item.label,{mediaId:m.id,title:m.name,type:m.type,source:"agenda local",result:"inserido na fila"});
@@ -851,6 +913,7 @@ function bindEvents(){
   mainAudio.addEventListener("ended",()=>{
     $("playState").classList.remove("playing");
     finishSession("concluída");$("playBtn").textContent="▶";
+    processJingleRotationAfterTrack();
     if(queue.length&&(auto||segue))next();
     else if(auto)next();
     else{setPlayState("FIM DA FAIXA");setStatus("SISTEMA PRONTO");}

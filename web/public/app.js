@@ -16,6 +16,10 @@ let queue = [];
 let current = null;
 let filter = "all";
 let cartFilter = "all";
+const CART_SLOT_COUNT = 12;
+let cartSlots = Array(CART_SLOT_COUNT).fill(null);
+let pendingCartSlot = null;
+let jingleRotation = {enabled:false,every:3,counter:0,index:0};
 let auto = false;
 let segue = false;
 let schedules = [];
@@ -161,6 +165,9 @@ async function persistState() {
     key:APP_KEY,
     value:{
       queueIds:queue.map(m=>m.id),
+      queueKinds:queue.map(m=>m._qolanQueueKind||"regular"),
+      cartSlots:core.normalizeCartSlots(cartSlots,CART_SLOT_COUNT),
+      jingleRotation:{enabled:jingleRotation.enabled===true,every:jingleRotation.every,counter:jingleRotation.counter,index:jingleRotation.index},
       schedules,campaigns,logs:logs.slice(0,500),settings,
       segue
     }
@@ -183,7 +190,16 @@ async function restoreState() {
     settings={...settings,...(state.settings||{})};
     if(!core.isValidTimeZone(settings.timezone))settings.timezone="America/Sao_Paulo";
     segue=!!state.segue;
-    queue=(Array.isArray(state.queueIds)?state.queueIds:[]).map(id=>media.find(m=>m.id===id)).filter(Boolean);
+    const queueIds=Array.isArray(state.queueIds)?state.queueIds:[];
+    const queueKinds=Array.isArray(state.queueKinds)?state.queueKinds:[];
+    queue=queueIds.map((id,i)=>{const item=media.find(m=>m.id===id);return item&&queueKinds[i]==="priority"?{...item,_qolanQueueKind:"priority"}:item;}).filter(Boolean);
+    cartSlots=core.normalizeCartSlots(Array.isArray(state.cartSlots)?state.cartSlots:[],CART_SLOT_COUNT);
+    jingleRotation={
+      enabled:!!(state.jingleRotation&&state.jingleRotation.enabled===true),
+      every:Math.max(2,Math.min(12,Math.floor(Number(state.jingleRotation&&state.jingleRotation.every)||3))),
+      counter:Math.max(0,Math.min(1000,Math.floor(Number(state.jingleRotation&&state.jingleRotation.counter)||0))),
+      index:Math.max(0,Math.min(100000,Math.floor(Number(state.jingleRotation&&state.jingleRotation.index)||0)))
+    };
   }
 }
 function classify(name) {
@@ -487,8 +503,11 @@ function refreshMode(){
   $("autoBtn").textContent=auto?"Ⅱ Desativar automação":"▶ Ativar automação local";
   $("diagMode").textContent=auto?"Ativa nesta aba":"Manual";
 }
-async function importFiles(files){
+async function importFiles(files,options={}){
   let imported=0;
+  const importedIds=[];
+  const forcedType=options.forcedType&&CATEGORY_LABELS[options.forcedType]?options.forcedType:null;
+  let targetSlot=Number.isInteger(options.targetSlot)&&options.targetSlot>=0&&options.targetSlot<CART_SLOT_COUNT?options.targetSlot:null;
   for(const file of Array.from(files||[])){
     if(!file.type.startsWith("audio/")&&!/\.(mp3|wav|ogg|flac|m4a|aac|opus|wma)$/i.test(file.name)){
       showToast("Arquivo ignorado: "+file.name+" não parece ser áudio.",true);continue;
@@ -499,19 +518,24 @@ async function importFiles(files){
       const done=()=>{const d=Number.isFinite(probe.duration)?probe.duration:0;probe.removeAttribute("src");probe.load();resolve(d);};
       probe.onloadedmetadata=done;probe.onerror=()=>resolve(0);probe.src=url;
     });
-    const type=classify(file.name);
+    const type=forcedType||classify(file.name);
     const m={id,name:file.name,type,url,file,blob:file,duration,size:file.size,lastModified:file.lastModified};
     try{
       await dbPut("media",{id,name:file.name,type,duration,size:file.size,lastModified:file.lastModified,blob:file});
-      media.push(m);imported++;
+      media.push(m);imported++;importedIds.push(id);
+      if(options.assignCart===true&&["jingle","spot","track"].includes(type)){
+        if(targetSlot!==null){cartSlots[targetSlot]=id;targetSlot=null;}
+        else cartSlots=core.fillEmptyCartSlots(cartSlots,[id],CART_SLOT_COUNT).slots;
+      }
       writeLog("media-import","Importado: "+m.name,{mediaId:m.id,title:m.name,type:m.type,result:"armazenado no navegador"});
     }catch(err){
       URL.revokeObjectURL(url);urlSet.delete(url);
       showToast("Falha ao armazenar "+file.name+". Verifique o espaço disponível no navegador.",true);
     }
   }
-  drawLibrary();drawQueue();renderStats();persistState();
-  if(imported)showToast(imported+" arquivo(s) importado(s) e armazenado(s) neste navegador.");
+  drawLibrary();drawQueue();renderStats();refreshJingleRotationUI();persistState();
+  if(imported)showToast(imported+" arquivo(s) importado(s)"+(options.assignCart===true?" para a biblioteca e cartwall":"")+" neste navegador.");
+  return importedIds;
 }
 async function updateMediaType(id,type){
   const m=findMedia(id);if(!m||!CATEGORY_LABELS[type])return;

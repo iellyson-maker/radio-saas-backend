@@ -39,7 +39,7 @@ child.stderr.on("data", chunk => { output += chunk.toString(); });
     const sourceJson=await sources.json(); assert.equal(sourceJson.ok,true);
     for (const id of ["agencia-brasil","radioagencia","politica","economia","esportes"]) assert.ok(sourceJson.sources.some(s=>s.id===id),"Missing feed "+id);
     const blocked=await fetch(base+"/api/news/not-allowed"); assert.equal(blocked.status,404);
-    const unknownApi=await fetch(base+"/api/not-real"); assert.equal(unknownApi.status,404); assert.match(unknownApi.headers.get("content-type")||"",/application\\/json/);
+    const unknownApi=await fetch(base+"/api/not-real"); assert.equal(unknownApi.status,404); assert.ok((unknownApi.headers.get("content-type")||"").includes("application/json"));
     assert.equal((await fetch(base+"/health")).headers.get("x-content-type-options"),"nosniff");
 
     const logicResponse=await fetch(base+"/logic.js?v=0.5.1"); assert.equal(logicResponse.status,200); assert.match(logicResponse.headers.get("content-type")||"",/javascript/);

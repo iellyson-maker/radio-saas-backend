@@ -1,12 +1,13 @@
 {
-  "name": "radioos-studio-web",
+  "name": "qolan-studio-web",
   "version": "0.1.0",
   "private": true,
-  "description": "RadioOS Studio Web MVP",
+  "description": "Qolan Studio — console web de operação de rádio",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "check": "node --check server.js && node --check public/app.js"
+    "check": "node --check server.js && node --check public/app.js",
+    "test": "node test/smoke.js"
   },
   "engines": {
     "node": ">=20"

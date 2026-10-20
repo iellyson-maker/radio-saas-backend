@@ -141,3 +141,14 @@ A rotação de vinhetas pode ser ativada para inserir uma vinheta após um inter
 ## Atualização visual 0.6.1 — cartwall colorido
 
 A cartucheira recebe 12 identidades de cor persistentes por posição, com fundos escuros tonalizados, acentos de alto contraste, foco visual nos ícones e estado de reprodução destacado. A codificação das posições não substitui a etiqueta de categoria (vinheta, comercial ou trilha), e slots vazios continuam identificáveis e fáceis de localizar. Alteração visual sem mudança na lógica de disparo ou na persistência dos cartuchos.
+
+
+## Qolan Studio 0.7.0 — console, pré-escuta e áudio técnico
+
+- O console principal deixa de apresentar cartões auxiliares e avisos longos; os módulos de conteúdo e operação secundária continuam disponíveis pelas páginas próprias.
+- A cartwall usa a altura natural do conteúdo, com 4 colunas no desktop e layout responsivo em telas menores; não limita a área a uma altura fixa que encubra posições.
+- Relógio digital com horário ajustado por amostra do endpoint de saúde do servidor e convertido para o fuso da emissora configurado. Se a sincronização falhar, identifica que está usando o relógio do dispositivo.
+- Player PFL/pré-escuta separado do player principal, com seleção de mídia, play/pausa, parada, progresso e tempo. A pré-escuta não altera a fila nem a sessão de execução no ar.
+- Página Áudio técnico com faders de volume de programa, cartwall e pré-escuta, detecção de saídas e seleção de dispositivos conforme as APIs oferecidas pelo navegador.
+- Limite mantido explicitamente: seleção de saída e canais independentes dependem do navegador, permissões e drivers do computador. Isto não é mixer de hardware, driver ASIO/WASAPI dedicado nem engine Windows 24/7. Esse trabalho continua como evolução separada da Qolan Engine.
+- Preferências de volume entram no backup; IDs de saídas físicas são descartados na restauração porque podem pertencer a outro computador. As seleções locais permanecem no armazenamento do navegador.

@@ -23,17 +23,17 @@ child.stderr.on("data", chunk => { output += chunk.toString(); });
     assert.equal(healthResponse.status, 200);
     const health = await healthResponse.json();
     assert.equal(health.ok, true); assert.equal(health.service, "qolan-studio-web");
-    assert.equal(health.product, "Qolan Studio"); assert.equal(health.version, "0.6.1");
+    assert.equal(health.product, "Qolan Studio"); assert.equal(health.version, "0.7.0");
 
     const pageResponse = await fetch(base + "/"); assert.equal(pageResponse.status, 200);
     const page = await pageResponse.text();
-    for (const text of ["Console de estúdio","Cartwall","Conteúdo ao vivo","Rádio visual / OBS","Montador de bloco",'id="view-live"','id="view-visual"','id="cartAudio"','id="cartSlotInput"','data-cart-import="jingle"','id="jingleRotationEnabled"','id="buildRotationBtn"','id="obsConnectBtn"','id="newsSourceSelect"','id="liveNotes"']) {
+    for (const text of ["Console de estúdio","Cartwall","Conteúdo ao vivo","Rádio visual / OBS","Montador de bloco",'id="view-live"','id="view-visual"','id="cartAudio"','id="cartSlotInput"','data-cart-import="jingle"','id="jingleRotationEnabled"','id="buildRotationBtn"','id="obsConnectBtn"','id="newsSourceSelect"','id="liveNotes"','id="view-preview"','id="view-audio"','id="previewAudio"','id="previewMediaSelect"','id="mainVolumeSlider"','id="mainOutputSelect"','id="clockSource"','data-media-preview=']) {
       assert.ok(page.includes(text), "Missing UI element: " + text);
     }
-    assert.ok(page.includes("styles.css?v=0.6.1")); assert.ok(page.includes("app.js?v=0.6.1"));
+    assert.ok(page.includes("styles.css?v=0.7.0")); assert.ok(page.includes("app.js?v=0.7.0"));
     assert.match(page,/\.view\s*\{\s*display:\s*none\s*;/);
     assert.match(page,/\.view\.active\s*\{\s*display:\s*block\s*;/);
-    for (const view of ["console","library","programming","commercials","live","visual","logs","diagnostics","settings"]) assert.ok(page.includes('id="view-'+view+'"'),"Missing module "+view);
+    for (const view of ["console","preview","audio","library","programming","commercials","live","visual","logs","diagnostics","settings"]) assert.ok(page.includes('id="view-'+view+'"'),"Missing module "+view);
 
     const sources=await fetch(base+"/api/news-sources"); assert.equal(sources.status,200);
     const sourceJson=await sources.json(); assert.equal(sourceJson.ok,true);
@@ -42,17 +42,18 @@ child.stderr.on("data", chunk => { output += chunk.toString(); });
     const unknownApi=await fetch(base+"/api/not-real"); assert.equal(unknownApi.status,404); assert.ok((unknownApi.headers.get("content-type")||"").includes("application/json"));
     assert.equal((await fetch(base+"/health")).headers.get("x-content-type-options"),"nosniff");
 
-    const logicResponse=await fetch(base+"/logic.js?v=0.6.1"); assert.equal(logicResponse.status,200); assert.match(logicResponse.headers.get("content-type")||"",/javascript/);
+    const logicResponse=await fetch(base+"/logic.js?v=0.7.0"); assert.equal(logicResponse.status,200); assert.match(logicResponse.headers.get("content-type")||"",/javascript/);
     const logicText=await logicResponse.text(); for(const token of ["stationClockParts","collectDueItems","normalizeBackup"]) assert.ok(logicText.includes(token),"Missing deterministic core "+token);
-    const appResponse=await fetch(base+"/app.js?v=0.6.1"); assert.equal(appResponse.status,200);
+    const appResponse=await fetch(base+"/app.js?v=0.7.0"); assert.equal(appResponse.status,200);
     const appText=await appResponse.text();
-    for (const token of ["indexedDB.open","scheduleTick","stationClockParts","collectDueItems","cartSlots","normalizeCartSlots","processJingleRotationAfterTrack","advanceJingleRotation","data-cart-slot-play","mainAudio.addEventListener","play-complete","buildRotationBlock","playCart","SetCurrentProgramScene","GetSceneList","GetSourceScreenshot","loadNews"]) assert.ok(appText.includes(token),"Missing application behavior "+token);
-    const cssResponse=await fetch(base+"/styles.css?v=0.6.1"); assert.equal(cssResponse.status,200);
+    for (const token of ["indexedDB.open","scheduleTick","stationClockParts","collectDueItems","cartSlots","normalizeCartSlots","processJingleRotationAfterTrack","advanceJingleRotation","data-cart-slot-play","mainAudio.addEventListener","play-complete","buildRotationBlock","playCart","previewAudio","togglePreview","applyAudioOutput","refreshAudioDevices","syncClock","data-media-preview","mainVolumeSlider","mainOutputSelect","previewMediaSelect","SetCurrentProgramScene","GetSceneList","GetSourceScreenshot","loadNews"]) assert.ok(appText.includes(token),"Missing application behavior "+token);
+    const cssResponse=await fetch(base+"/styles.css?v=0.7.0"); assert.equal(cssResponse.status,200);
     assert.match(cssResponse.headers.get("content-type")||"",/text\/css/);
     const css=await cssResponse.text();
-    for (const token of [".studio-grid",".ops-metrics",".live-content-grid",".obs-workspace",".rotation-builder",".cart-live-label",".cart-pad-fire",".jingle-rotation-controls"]) assert.ok(css.includes(token),"Missing style "+token);
+    for (const token of [".studio-grid",".ops-metrics",".live-content-grid",".obs-workspace",".rotation-builder",".cart-live-label",".cart-pad-fire",".jingle-rotation-controls",".preview-workspace",".audio-tech-grid",".studio-cart-panel .cart-grid",".clock-block small",".preview-deck",".audio-fader"]) assert.ok(css.includes(token),"Missing style "+token);
     for (let slot=0;slot<12;slot++) assert.ok(css.includes(`.cart-pad[data-slot="${slot}"]`),"Missing color palette for cart slot "+slot);
-    console.log("Smoke tests passed: Qolan 0.6.1, operator workflow modules, rotation builder, separate cartwall audio, RSS allowlist/API, OBS WebSocket connector, responsive CSS.");
+    assert.match(css,/\.studio-cart-panel \.cart-grid\s*\{[^}]*max-height:none[^}]*overflow:visible/,"Cartwall grid must not be clipped or overlap following content");
+    console.log("Smoke tests passed: Qolan 0.7.0, operator workflow modules, rotation builder, separate cartwall audio, RSS allowlist/API, OBS WebSocket connector, responsive CSS.");
   } catch (error) {
     console.error(error); console.error(output); process.exitCode = 1;
   } finally { child.kill(); }

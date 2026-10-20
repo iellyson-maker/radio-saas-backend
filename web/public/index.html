@@ -3,15 +3,15 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#0b1115">
-  <meta name="description" content="Qolan Studio — console de operação de rádio com biblioteca, playlists, programação e relatórios locais.">
-  <title>Qolan Studio | Console de Rádio</title>
+  <meta name="theme-color" content="#0b0e12">
+  <meta name="description" content="Qolan Studio — console operacional para locutores, programação, biblioteca de áudio e disparos de rádio.">
+  <title>Qolan Studio | Console de Estúdio</title>
   <style>
     /* Regra crítica de segurança visual: uma tela por vez, mesmo se o CSS externo falhar. */
     .view { display: none; }
     .view.active { display: block; }
   </style>
-  <link rel="stylesheet" href="/styles.css?v=0.2.1">
+  <link rel="stylesheet" href="/styles.css?v=0.3.0">
 </head>
 <body>
 <div class="shell">
@@ -32,7 +32,7 @@
       <button class="nav-item" data-view="diagnostics"><span class="nav-icon">⌁</span> Diagnóstico</button>
       <button class="nav-item" data-view="settings"><span class="nav-icon">⚙</span> Configurações</button>
     </nav>
-    <div class="sidebar-bottom"><div class="version-row"><span>QOLAN WEB</span><b>0.2.1</b></div><p>Versão web de avaliação. Não é um motor de transmissão 24/7.</p></div>
+    <div class="sidebar-bottom"><div class="version-row"><span>QOLAN WEB</span><b>0.3.0</b></div><p>Versão web de avaliação. Não é um motor de transmissão 24/7.</p></div>
   </aside>
 
   <div class="work-area">
@@ -48,16 +48,16 @@
 
     <main class="content">
       <section class="view active" id="view-console">
-        <div class="page-heading"><div><span class="eyebrow">VISÃO GERAL</span><h1>Console de operação</h1><p>Controle rápido da reprodução, fila e disparos.</p></div><div class="heading-meta"><span class="local-tag"><i></i> DADOS NESTE NAVEGADOR</span></div></div>
+        <div class="page-heading"><div><span class="eyebrow">ESTÚDIO • OPERAÇÃO</span><h1>Console de estúdio</h1><p>Player principal, sequência de execução e disparos rápidos.</p></div><div class="heading-meta"><span class="local-tag"><i></i> DADOS NESTE NAVEGADOR</span></div></div>
         <div class="stat-grid">
-          <article class="stat-card"><span>NO AR</span><b id="statNow">—</b><small id="statNowMeta">Nenhuma faixa</small></article>
+          <article class="stat-card"><span>PLAYER PRINCIPAL</span><b id="statNow">—</b><small id="statNowMeta">Nenhuma faixa</small></article>
           <article class="stat-card"><span>BIBLIOTECA</span><b id="statMedia">0</b><small>arquivos indexados localmente</small></article>
           <article class="stat-card"><span>NA FILA</span><b id="statQueue">0</b><small>itens aguardando reprodução</small></article>
-          <article class="stat-card"><span>VEICULAÇÕES HOJE</span><b id="statPlays">0</b><small>registros desta sessão local</small></article>
+          <article class="stat-card"><span>EXECUÇÕES REGISTRADAS</span><b id="statPlays">0</b><small>registros desta sessão local</small></article>
         </div>
         <div class="console-grid">
           <section class="panel player-panel">
-            <div class="panel-head"><div><span class="eyebrow">SAÍDA DE ÁUDIO</span><h2>NO AR</h2></div><span class="state-pill" id="playState">PARADO</span></div>
+            <div class="panel-head"><div><span class="eyebrow">SAÍDA DE PROGRAMA</span><h2>Player principal</h2></div><span class="state-pill" id="playState">PARADO</span></div>
             <div class="onair-display"><div class="album-art"><span>Q</span><i>♫</i></div><div class="track-details"><h3 id="currentTitle">Nenhuma faixa selecionada</h3><p id="currentMeta">Importe áudio ou selecione um item na biblioteca.</p><div class="progress-track"><span id="progress"></span></div><div class="time-row"><span id="elapsed">00:00</span><span id="duration">00:00</span></div></div></div>
             <audio id="audio" preload="metadata"></audio>
             <div class="transport">
@@ -68,19 +68,19 @@
           </section>
 
           <section class="panel queue-panel">
-            <div class="panel-head"><div><span class="eyebrow">SEQUÊNCIA DE EXECUÇÃO</span><h2>Próximos itens</h2></div><button class="btn btn-quiet btn-small" id="clearQueue">Limpar fila</button></div>
+            <div class="panel-head"><div><span class="eyebrow">PLAYLIST • ORDEM DE EXECUÇÃO</span><h2>Fila de programação</h2></div><button class="btn btn-quiet btn-small" id="clearQueue">Limpar fila</button></div>
             <div class="queue-summary"><b id="queueCount">0 itens</b><span>Reordene com as setas</span></div><div id="queueList" class="record-list empty-state">Adicione itens pela biblioteca.</div>
             <div class="queue-foot"><button class="btn btn-quiet" data-go="library">Abrir biblioteca →</button><button class="btn btn-quiet" id="saveQueueBtn">Salvar fila local</button></div>
           </section>
 
           <section class="panel cart-panel">
-            <div class="panel-head"><div><span class="eyebrow">DISPARO INSTANTÂNEO</span><h2>Cartucheira</h2></div><span class="subtle">F1–F9</span></div>
+            <div class="panel-head"><div><span class="eyebrow">DISPARO INSTANTÂNEO</span><h2>Cartwall <span class="heading-secondary">/ cartucheira</span></h2></div><span class="subtle">F1–F9</span></div>
             <div class="cart-tabs"><button class="active" data-cart-filter="all">TODOS</button><button data-cart-filter="jingle">VINHETAS</button><button data-cart-filter="spot">COMERCIAIS</button><button data-cart-filter="track">TRILHAS</button></div>
             <div id="cartList" class="cart-grid empty-state">Importe vinhetas, comerciais ou trilhas para montar a cartucheira.</div>
             <p class="panel-note">O disparo substitui a reprodução principal nesta versão web. O motor profissional com canais independentes será desenvolvido na engine local.</p>
           </section>
           <section class="panel activity-panel">
-            <div class="panel-head"><div><span class="eyebrow">ATIVIDADE RECENTE</span><h2>Eventos da operação</h2></div><button class="btn btn-quiet btn-small" data-go="logs">Ver registros →</button></div>
+            <div class="panel-head"><div><span class="eyebrow">HISTÓRICO DA SESSÃO</span><h2>Eventos recentes</h2></div><button class="btn btn-quiet btn-small" data-go="logs">Ver registros →</button></div>
             <div id="recentLogs" class="record-list empty-state">Ainda não há eventos registrados.</div>
           </section>
         </div>
@@ -160,10 +160,10 @@
         </div>
       </section>
     </main>
-    <footer class="global-footer"><span>QOLAN STUDIO WEB 0.2.1</span><span id="storageFooter">Preparando armazenamento local…</span><span>Console de avaliação · sem transmissão contínua</span></footer>
+    <footer class="global-footer"><span>QOLAN STUDIO WEB 0.3.0</span><span id="storageFooter">Preparando armazenamento local…</span><span>Console de avaliação · sem transmissão contínua</span></footer>
   </div>
 </div>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
-<script src="/app.js?v=0.2.1"></script>
+<script src="/app.js?v=0.3.0"></script>
 </body>
 </html>

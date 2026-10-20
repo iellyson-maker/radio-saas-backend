@@ -136,3 +136,8 @@ A versão web atual é um MVP local-first servido pelo Render. IndexedDB armazen
 A cartwall foi reformulada como cartucheira fixa de 12 slots, com estado de slot, categoria, duração, substituição e remoção sem apagar o arquivo da biblioteca. A importação direta por categoria (vinhetas, comerciais, trilhas) preenche os slots vazios e também registra o arquivo na biblioteca local. F1–F9 disparam os nove primeiros slots fixos. Os slots atribuídos e as regras da rotação são persistidos no IndexedDB e incluídos no backup JSON, filtrando referências a mídia ausente na restauração.
 
 A rotação de vinhetas pode ser ativada para inserir uma vinheta após um intervalo configurável de músicas concluídas (2–12). A inserção é feita na fila; eventos já priorizados de agenda/campanha mantêm precedência. O recurso depende da automação local ativa para tocar sem intervenção e não substitui o motor Windows residente. A interface do console também foi limpa de cartões estáticos que simulavam status de módulos; agora leva aos módulos reais de redação e OBS.
+
+
+## Atualização visual 0.6.1 — cartwall colorido
+
+A cartucheira recebe 12 identidades de cor persistentes por posição, com fundos escuros tonalizados, acentos de alto contraste, foco visual nos ícones e estado de reprodução destacado. A codificação das posições não substitui a etiqueta de categoria (vinheta, comercial ou trilha), e slots vazios continuam identificáveis e fáceis de localizar. Alteração visual sem mudança na lógica de disparo ou na persistência dos cartuchos.

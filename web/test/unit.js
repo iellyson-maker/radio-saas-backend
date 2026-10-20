@@ -51,7 +51,7 @@ test("cart slots stay fixed, prevent duplicate media and fill only empty slots",
  const filled=fillEmptyCartSlots(slots,["j1","j2","j2","j3","j4"],12);
  assert.deepEqual(filled.assigned,[{slot:1,mediaId:"j2"},{slot:3,mediaId:"j3"},{slot:4,mediaId:"j4"}]);
  assert.deepEqual(filled.overflow,[]);
- assert.deepEqual(fillEmptyCartSlots(Array(2).fill("busy"),["extra"],2).overflow,["extra"]);
+ assert.deepEqual(fillEmptyCartSlots(["busy1","busy2"],["extra"],2).overflow,["extra"]);
 });
 
 test("jingle rotation inserts on configured music cadence, and skips non-music",()=>{

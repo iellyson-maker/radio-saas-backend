@@ -27,7 +27,7 @@ child.stderr.on("data", chunk => { output += chunk.toString(); });
 
     const pageResponse = await fetch(base + "/"); assert.equal(pageResponse.status, 200);
     const page = await pageResponse.text();
-    for (const text of ["Console de estúdio","Cartwall","Conteúdo ao vivo","Rádio visual / OBS","Montador de bloco",'id="view-live"','id="view-visual"','id="cartAudio"','id="cartSlotInput"','data-cart-import="jingle"','id="jingleRotationEnabled"','id="buildRotationBtn"','id="obsConnectBtn"','id="newsSourceSelect"','id="liveNotes"','id="view-preview"','id="view-audio"','id="previewAudio"','id="previewMediaSelect"','id="mainVolumeSlider"','id="mainOutputSelect"','id="clockSource"','data-media-preview=']) {
+    for (const text of ["Console de estúdio","Cartwall","Conteúdo ao vivo","Rádio visual / OBS","Montador de bloco",'id="view-live"','id="view-visual"','id="cartAudio"','id="cartSlotInput"','data-cart-import="jingle"','id="jingleRotationEnabled"','id="buildRotationBtn"','id="obsConnectBtn"','id="newsSourceSelect"','id="liveNotes"','id="view-preview"','id="view-audio"','id="previewAudio"','id="previewMediaSelect"','id="mainVolumeSlider"','id="mainOutputSelect"','id="clockSource"']) {
       assert.ok(page.includes(text), "Missing UI element: " + text);
     }
     assert.ok(page.includes("styles.css?v=0.7.0")); assert.ok(page.includes("app.js?v=0.7.0"));

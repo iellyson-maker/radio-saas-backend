@@ -308,7 +308,7 @@ function drawLibrary(){
 }
 function drawCarts(){
   const el=$("cartList");if(!el)return;
-  cartSlots=core.normalizeCartSlots(cartSlots,CART_SLOT_COUNT);
+  cartSlots=core.normalizeCartSlots(cartSlots,CART_SLOT_COUNT).map(id=>id&&findMedia(id)?id:null);
   const loaded=cartSlots.filter(id=>id&&findMedia(id)).length;
   $("cartSlotCount").textContent=loaded+"/"+CART_SLOT_COUNT;
   const html=[];
@@ -567,7 +567,7 @@ function refreshMode(){
   $("diagMode").textContent=auto?"Ativa nesta aba":"Manual";
 }
 async function importFiles(files,options={}){
-  let imported=0;
+  let imported=0,cartAssigned=0,cartOverflow=0;
   const importedIds=[];
   const forcedType=options.forcedType&&CATEGORY_LABELS[options.forcedType]?options.forcedType:null;
   let targetSlot=Number.isInteger(options.targetSlot)&&options.targetSlot>=0&&options.targetSlot<CART_SLOT_COUNT?options.targetSlot:null;
@@ -588,8 +588,8 @@ async function importFiles(files,options={}){
       await dbPut("media",{id,name:file.name,type,duration,size:file.size,lastModified:file.lastModified,blob:file});
       media.push(m);imported++;importedIds.push(id);
       if(options.assignCart===true&&["jingle","spot","track"].includes(type)){
-        if(targetSlot!==null){cartSlots[targetSlot]=id;targetSlot=null;}
-        else cartSlots=core.fillEmptyCartSlots(cartSlots,[id],CART_SLOT_COUNT).slots;
+        if(targetSlot!==null){cartSlots[targetSlot]=id;cartAssigned++;targetSlot=null;}
+        else {const placement=core.fillEmptyCartSlots(cartSlots,[id],CART_SLOT_COUNT);cartSlots=placement.slots;cartAssigned+=placement.assigned.length;cartOverflow+=placement.overflow.length;}
       }
       writeLog("media-import","Importado: "+m.name,{mediaId:m.id,title:m.name,type:m.type,result:"armazenado no navegador"});
     }catch(err){
@@ -598,7 +598,12 @@ async function importFiles(files,options={}){
     }
   }
   drawLibrary();drawQueue();renderStats();refreshJingleRotationUI();persistState();
-  if(imported)showToast(imported+" arquivo(s) importado(s)"+(options.assignCart===true?" para a biblioteca e cartwall":"")+" neste navegador.");
+  if(imported){
+    const message=options.assignCart===true
+      ?imported+" arquivo(s) importado(s) para a biblioteca; "+cartAssigned+" atribuído(s) à cartwall"+(cartOverflow?"; "+cartOverflow+" ficou/ficaram só na biblioteca porque os 12 slots estão ocupados.":" neste navegador.")
+      :imported+" arquivo(s) importado(s) e armazenado(s) neste navegador.";
+    showToast(message,cartOverflow>0);
+  }
   return importedIds;
 }
 async function updateMediaType(id,type){

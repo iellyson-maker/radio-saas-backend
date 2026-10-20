@@ -16,18 +16,3 @@ services:
         fromDatabase:
           name: radio-saas-db
           property: connectionString
-
-  # Qolan Studio web console (separate service; keeps the existing backend/database intact)
-  - type: web
-    name: qolan-studio-web
-    runtime: node
-    region: oregon
-    plan: free
-    branch: main
-    rootDir: web
-    buildCommand: npm install && npm run check && npm test
-    startCommand: npm start
-    healthCheckPath: /health
-    envVars:
-      - key: NODE_ENV
-        value: production

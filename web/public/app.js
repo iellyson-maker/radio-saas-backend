@@ -87,6 +87,7 @@ const labelEvent = event => ({
   "media-delete":"Mídia removida",
   "automation":"Automação local",
   "block-generated":"Bloco musical montado",
+  "jingle-rotation":"Inserção automática de vinheta",
   "cart-start":"Disparo de cartwall",
   "cart-complete":"Disparo concluído",
   "cart-stop":"Disparo interrompido"

@@ -43,14 +43,15 @@ test("missing local media does not consume the scheduled minute",()=>{
  assert.equal(schedules[0].lastFiredAt,undefined);
  assert.equal(collectDueItems(schedules,[],()=>({id:"missing"}),date,tz).events.length,1);
 });
-test("cart slots stay fixed and bulk-import assignment fills only empty slots",()=>{
+test("cart slots stay fixed, prevent duplicate media and fill only empty slots",()=>{
  const slots=normalizeCartSlots(["j1",null,"s1"],12);
  assert.equal(slots.length,12);
  assert.deepEqual(slots.slice(0,3),["j1",null,"s1"]);
- const filled=fillEmptyCartSlots(slots,["j2","j3","j4"],12);
+ assert.deepEqual(normalizeCartSlots(["j1","j1","s1","j1"],12).slice(0,4),["j1",null,"s1",null]);
+ const filled=fillEmptyCartSlots(slots,["j1","j2","j2","j3","j4"],12);
  assert.deepEqual(filled.assigned,[{slot:1,mediaId:"j2"},{slot:3,mediaId:"j3"},{slot:4,mediaId:"j4"}]);
  assert.deepEqual(filled.overflow,[]);
- assert.equal(fillEmptyCartSlots(Array(2).fill("busy"),["extra"],2).overflow[0],"extra");
+ assert.deepEqual(fillEmptyCartSlots(Array(2).fill("busy"),["extra"],2).overflow,["extra"]);
 });
 
 test("jingle rotation inserts on configured music cadence, and skips non-music",()=>{

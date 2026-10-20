@@ -19,6 +19,9 @@ let filter = "all";
 let cartFilter = "all";
 const CART_SLOT_COUNT = 12;
 let cartSlots = Array(CART_SLOT_COUNT).fill(null);
+const CART_SLOT_DEFAULT_COLORS=["#19372f","#192f43","#29213d","#35291b","#38212a","#173438","#2d351e","#32213d","#39261d","#1c3529","#37301c","#222b48"];
+let cartSlotPrefs = core.normalizeCartSlotPrefs([],CART_SLOT_COUNT);
+let editingCartSlot = null;
 let pendingCartSlot = null;
 let jingleRotation = {enabled:false,every:3,counter:0,index:0};
 let auto = false;
@@ -173,6 +176,7 @@ async function persistState() {
       queueIds:queue.map(m=>m.id),
       queueKinds:queue.map(m=>m._qolanQueueKind||"regular"),
       cartSlots:core.normalizeCartSlots(cartSlots,CART_SLOT_COUNT),
+      cartSlotPrefs:core.normalizeCartSlotPrefs(cartSlotPrefs,CART_SLOT_COUNT),
       jingleRotation:{enabled:jingleRotation.enabled===true,every:jingleRotation.every,counter:jingleRotation.counter,index:jingleRotation.index},
       schedules,campaigns,logs:logs.slice(0,500),settings,
       segue
@@ -200,6 +204,7 @@ async function restoreState() {
     const queueKinds=Array.isArray(state.queueKinds)?state.queueKinds:[];
     queue=queueIds.map((id,i)=>{const item=media.find(m=>m.id===id);return item&&queueKinds[i]==="priority"?{...item,_qolanQueueKind:"priority"}:item;}).filter(Boolean);
     cartSlots=core.normalizeCartSlots(Array.isArray(state.cartSlots)?state.cartSlots:[],CART_SLOT_COUNT);
+    cartSlotPrefs=core.normalizeCartSlotPrefs(Array.isArray(state.cartSlotPrefs)?state.cartSlotPrefs:[],CART_SLOT_COUNT);
     jingleRotation={
       enabled:!!(state.jingleRotation&&state.jingleRotation.enabled===true),
       every:Math.max(2,Math.min(12,Math.floor(Number(state.jingleRotation&&state.jingleRotation.every)||3))),
@@ -459,33 +464,110 @@ function drawLibrary(){
   drawCarts();
   fillMediaSelects();
 }
+
+function getCartSlotPref(index){
+  return cartSlotPrefs[index]||{label:"",color:""};
+}
+function getCartSlotDisplayName(index,item){
+  const pref=getCartSlotPref(index);
+  return pref.label||item?.name||"";
+}
+function cartSlotColorStyle(pref){
+  const color=typeof pref?.color==="string"&&/^#[0-9a-f]{6}$/i.test(pref.color)?pref.color.toLowerCase():"";
+  if(!color)return "";
+  const raw=color.slice(1),channels=[0,2,4].map(i=>parseInt(raw.slice(i,i+2),16)/255);
+  const lum=channels.map(c=>c<=.04045?c/12.92:Math.pow((c+.055)/1.055,2.4)).reduce((sum,c,i)=>sum+c*[.2126,.7152,.0722][i],0);
+  const foreground=lum>.39?"#0b1b25":"#f2f9ff";
+  const muted=lum>.39?"#314b5a":"#b1c7d7";
+  return ' style="--pad-custom-bg:'+color+';--pad-custom-text:'+foreground+';--pad-custom-muted:'+muted+'"';
+}
+function updateCartEditorPreview(){
+  if(editingCartSlot===null)return;
+  const name=$("cartSlotLabelInput").value.trim()||findMedia(cartSlots[editingCartSlot])?.name||("Cartucho "+String(editingCartSlot+1).padStart(2,"0"));
+  const color=$("cartSlotColorInput").value||CART_SLOT_DEFAULT_COLORS[editingCartSlot]||"#19372f";
+  $("cartSlotEditorPreviewName").textContent=name;
+  $("cartSlotEditorPreview").style.background=color;
+  const rgb=[0,2,4].map(i=>parseInt(color.slice(1).slice(i,i+2),16)/255);
+  const lum=rgb.map(c=>c<=.04045?c/12.92:Math.pow((c+.055)/1.055,2.4)).reduce((sum,c,i)=>sum+c*[.2126,.7152,.0722][i],0);
+  $("cartSlotEditorPreview").style.color=lum>.39?"#0b1b25":"#f2f9ff";
+}
+function openCartSlotEditor(index){
+  if(!Number.isInteger(index)||index<0||index>=CART_SLOT_COUNT)return;
+  editingCartSlot=index;
+  const pref=getCartSlotPref(index),item=findMedia(cartSlots[index]);
+  $("cartSlotEditorNumber").textContent=String(index+1).padStart(2,"0");
+  $("cartSlotEditorTitle").textContent="Personalizar cartucho "+String(index+1).padStart(2,"0");
+  $("cartSlotEditorSubtitle").textContent=item?("Áudio: "+item.name):"Você pode definir nome e cor antes de carregar um áudio.";
+  $("cartSlotLabelInput").value=pref.label||item?.name||"";
+  $("cartSlotColorInput").value=pref.color||CART_SLOT_DEFAULT_COLORS[index]||"#19372f";
+  updateCartEditorPreview();
+  const dialog=$("cartSlotEditor");
+  if(typeof dialog.showModal==="function"){if(!dialog.open)dialog.showModal();}
+  else dialog.setAttribute("open","");
+  $("cartSlotLabelInput").focus();
+  $("cartSlotLabelInput").select();
+}
+function closeCartSlotEditor(){
+  const dialog=$("cartSlotEditor");
+  if(dialog.open&&typeof dialog.close==="function")dialog.close();
+  else dialog.removeAttribute("open");
+  editingCartSlot=null;
+}
+async function saveCartSlotEditor(event){
+  event.preventDefault();
+  if(editingCartSlot===null)return;
+  const index=editingCartSlot,item=findMedia(cartSlots[index]);
+  const submitted=$("cartSlotLabelInput").value.trim().slice(0,40);
+  const label=item&&submitted===item.name?"":submitted;
+  const chosen=String($("cartSlotColorInput").value||"").toLowerCase();
+  const color=/^#[0-9a-f]{6}$/.test(chosen)&&chosen!==CART_SLOT_DEFAULT_COLORS[index]?chosen:"";
+  cartSlotPrefs=core.normalizeCartSlotPrefs(cartSlotPrefs,CART_SLOT_COUNT);
+  cartSlotPrefs[index]={label,color};
+  closeCartSlotEditor();
+  drawCarts();
+  await persistState();
+  showToast("Cartucho "+String(index+1).padStart(2,"0")+" personalizado.");
+}
+async function resetCartSlotEditor(){
+  if(editingCartSlot===null)return;
+  const index=editingCartSlot;
+  cartSlotPrefs[index]={label:"",color:""};
+  closeCartSlotEditor();drawCarts();await persistState();
+  showToast("Cartucho "+String(index+1).padStart(2,"0")+" voltou ao padrão.");
+}
+
 function drawCarts(){
   const el=$("cartList");if(!el)return;
   cartSlots=core.normalizeCartSlots(cartSlots,CART_SLOT_COUNT).map(id=>id&&findMedia(id)?id:null);
+  cartSlotPrefs=core.normalizeCartSlotPrefs(cartSlotPrefs,CART_SLOT_COUNT);
   const loaded=cartSlots.filter(id=>id&&findMedia(id)).length;
   $("cartSlotCount").textContent=loaded+"/"+CART_SLOT_COUNT;
   const html=[];
   for(let i=0;i<CART_SLOT_COUNT;i++){
-    const id=cartSlots[i],m=id?findMedia(id):null;
+    const id=cartSlots[i],m=id?findMedia(id):null,pref=getCartSlotPref(i);
     const visible=m&&(cartFilter==="all"||m.type===cartFilter);
     const key=i<9?"F"+(i+1):"—";
+    const displayName=m?getCartSlotDisplayName(i,m):pref.label;
+    const customClass=pref.color?" is-customized":"";
+    const customStyle=cartSlotColorStyle(pref);
     if(m&&visible){
       const category=m.type==="spot"?"COMERCIAL":m.type==="track"?"TRILHA":m.type==="music"?"MÚSICA":"VINHETA";
-      const playing=currentCart&&currentCart.id===m.id;
+      const playing=currentCart&&(currentCart.slotIndex===i||currentCart.id===m.id);
       const icon=m.type==="spot"?"◉":m.type==="track"?"♫":m.type==="music"?"♪":"✳";
-      html.push('<article class="cart-pad is-loaded '+(m.type==="spot"?"type-spot":m.type==="track"?"type-track":m.type==="music"?"type-music":"type-jingle")+' '+(playing?"is-playing":"")+'" data-slot="'+i+'">'+
-        '<button type="button" class="cart-pad-fire '+(playing?"is-playing":"")+'" data-cart-slot-play="'+i+'" aria-label="'+(playing?"Parar":"Disparar")+' '+escapeHtml(m.name)+'">'+
+      html.push('<article class="cart-pad is-loaded '+(m.type==="spot"?"type-spot":m.type==="track"?"type-track":m.type==="music"?"type-music":"type-jingle")+(playing?" is-playing":"")+customClass+'" data-slot="'+i+'"'+customStyle+'>'+
+        '<button type="button" class="cart-pad-fire '+(playing?"is-playing":"")+'" data-cart-slot-play="'+i+'" aria-label="'+(playing?"Parar":"Disparar")+' '+escapeHtml(displayName)+'">'+
         '<span class="cart-pad-top"><span class="cart-pad-number">'+String(i+1).padStart(2,"0")+'</span><span class="cart-pad-hotkey">'+key+'</span></span>'+
         '<span class="cart-pad-icon">'+icon+'</span>'+
-        '<span class="cart-pad-name" title="'+escapeHtml(m.name)+'">'+escapeHtml(m.name)+'</span>'+
+        '<span class="cart-pad-name" title="'+escapeHtml(displayName)+'">'+escapeHtml(displayName)+'</span>'+
         '<span class="cart-pad-meta"><span>'+category+'</span><span>'+fmt(m.duration)+'</span></span>'+
         '<span class="cart-pad-action">'+(playing?"■ PARAR DISPARO":"▶ DISPARAR")+'</span></button>'+
-        '<div class="cart-pad-tools"><button type="button" data-cart-slot-load="'+i+'" title="Trocar áudio deste slot">Trocar</button><button type="button" data-cart-slot-clear="'+i+'" title="Esvaziar slot" aria-label="Esvaziar slot">×</button></div></article>');
+        '<div class="cart-pad-tools"><button type="button" data-cart-slot-edit="'+i+'" title="Renomear ou alterar cor interna">✎ Personalizar</button><button type="button" data-cart-slot-load="'+i+'" title="Trocar áudio deste slot">Trocar</button><button type="button" data-cart-slot-clear="'+i+'" title="Esvaziar slot" aria-label="Esvaziar slot">×</button></div></article>');
     }else if(m){
-      /* Ocultar slots de outras categorias no filtro; não repetir o rótulo/título do mesmo cartucho. */
+      /* Ocultar slots de outras categorias no filtro; não repetir o cartucho em outra categoria. */
       continue;
     }else{
-      html.push('<article class="cart-pad is-empty" data-slot="'+i+'"><button type="button" class="cart-pad-empty" data-cart-slot-load="'+i+'"><span class="cart-pad-top"><span class="cart-pad-number">'+String(i+1).padStart(2,"0")+'</span><span class="cart-pad-hotkey">'+key+'</span></span><span class="cart-pad-plus">＋</span><b>Carregar áudio</b><small>'+(cartFilter==="all"?"Vinheta, comercial ou trilha":CATEGORY_LABELS[cartFilter])+'</small></button></article>');
+      const emptyName=displayName||"Carregar áudio";
+      html.push('<article class="cart-pad is-empty'+customClass+'" data-slot="'+i+'"'+customStyle+'><button type="button" class="cart-pad-empty" data-cart-slot-load="'+i+'"><span class="cart-pad-top"><span class="cart-pad-number">'+String(i+1).padStart(2,"0")+'</span><span class="cart-pad-hotkey">'+key+'</span></span><span class="cart-pad-plus">＋</span><b>'+escapeHtml(emptyName)+'</b><small>'+(cartFilter==="all"?"Vinheta, comercial ou trilha":CATEGORY_LABELS[cartFilter])+'</small></button><div class="cart-pad-tools"><button type="button" data-cart-slot-edit="'+i+'" title="Renomear ou alterar cor interna">✎ Personalizar</button></div></article>');
     }
   }
   el.className="cart-grid";
@@ -845,7 +927,7 @@ function download(name,content,type){
   setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 async function exportBackup(){
-  const payload={product:"Qolan Studio",schemaVersion:1,exportedAt:now().toISOString(),settings,schedules,campaigns,queueIds:queue.map(m=>m.id),cartSlots:core.normalizeCartSlots(cartSlots,CART_SLOT_COUNT),jingleRotation,logs};
+  const payload={product:"Qolan Studio",schemaVersion:1,exportedAt:now().toISOString(),settings,schedules,campaigns,queueIds:queue.map(m=>m.id),cartSlots:core.normalizeCartSlots(cartSlots,CART_SLOT_COUNT),cartSlotPrefs:core.normalizeCartSlotPrefs(cartSlotPrefs,CART_SLOT_COUNT),jingleRotation,logs};
   download("qolan-studio-backup-"+localDateKey(now())+".json",JSON.stringify(payload,null,2),"application/json");
   showToast("Backup de configurações e registros exportado. Os arquivos de áudio não estão incluídos.");
 }
@@ -858,6 +940,7 @@ async function restoreBackup(file){
     settings=clean.settings;schedules=clean.schedules;campaigns=clean.campaigns;logs=clean.logs;
     queue=clean.queueIds.map(findMedia).filter(Boolean);
     cartSlots=core.normalizeCartSlots(clean.cartSlots,CART_SLOT_COUNT);
+    cartSlotPrefs=core.normalizeCartSlotPrefs(clean.cartSlotPrefs,CART_SLOT_COUNT);
     jingleRotation=clean.jingleRotation||{enabled:false,every:3,counter:0,index:0};
     await persistState();renderEverything();fillSettings();drawCarts();
     showToast("Backup importado. Reimporte separadamente os arquivos de áudio ausentes.");

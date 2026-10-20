@@ -676,7 +676,7 @@ function download(name,content,type){
   setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 async function exportBackup(){
-  const payload={product:"Qolan Studio",schemaVersion:1,exportedAt:now().toISOString(),settings,schedules,campaigns,queueIds:queue.map(m=>m.id),logs};
+  const payload={product:"Qolan Studio",schemaVersion:1,exportedAt:now().toISOString(),settings,schedules,campaigns,queueIds:queue.map(m=>m.id),cartSlots:core.normalizeCartSlots(cartSlots,CART_SLOT_COUNT),jingleRotation,logs};
   download("qolan-studio-backup-"+localDateKey(now())+".json",JSON.stringify(payload,null,2),"application/json");
   showToast("Backup de configurações e registros exportado. Os arquivos de áudio não estão incluídos.");
 }
@@ -688,7 +688,9 @@ async function restoreBackup(file){
     const clean=core.normalizeBackup(payload,new Set(media.map(m=>m.id)));
     settings=clean.settings;schedules=clean.schedules;campaigns=clean.campaigns;logs=clean.logs;
     queue=clean.queueIds.map(findMedia).filter(Boolean);
-    await persistState();renderEverything();fillSettings();
+    cartSlots=core.normalizeCartSlots(clean.cartSlots,CART_SLOT_COUNT);
+    jingleRotation=clean.jingleRotation||{enabled:false,every:3,counter:0,index:0};
+    await persistState();renderEverything();fillSettings();drawCarts();
     showToast("Backup importado. Reimporte separadamente os arquivos de áudio ausentes.");
   }catch(err){showToast("Não foi possível importar o backup: "+(err.message||"arquivo inválido"),true);}
 }

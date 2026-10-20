@@ -936,3 +936,95 @@ input, select {
 .support-open-button:hover span {transform:translateX(3px)}
 .support-open-blue {border-top-color:#2b4050; color:#a9dafa; background:#15232c}
 .support-open-blue:hover {color:#e1f4ff; background:#1c303d}
+
+
+/* Qolan Studio 0.7.0 — layout de console sem sobreposição */
+.clock-block {min-width:132px; gap:3px}
+.clock-block b {font-size:25px; letter-spacing:1.1px; line-height:1.05}
+.clock-block small {color:#75deb3; font-size:8px; font-weight:850; letter-spacing:.7px; white-space:nowrap}
+.studio-grid {align-items:start; gap:14px}
+.studio-main-column,.studio-side-column {min-width:0; align-items:stretch}
+.studio-side-column {gap:0}
+.studio-cart-panel {min-width:0; height:auto}
+.studio-cart-panel .cart-grid {grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; max-height:none; height:auto; overflow:visible; padding:10px}
+.studio-cart-panel .cart-pad {min-width:0; min-height:126px}
+.studio-cart-panel .cart-pad-name {overflow-wrap:anywhere}
+.studio-cart-panel .cart-pad-tools {flex:0 0 auto}
+.studio-cart-panel .cart-import-toolbar {align-items:center; flex-direction:row}
+.studio-cart-panel .cart-import-actions {width:auto; justify-content:flex-end; flex-wrap:wrap}
+.studio-cart-panel .cart-tabs {flex-wrap:wrap}
+.studio-grid .studio-notice {display:none}
+.clock-block {text-align:right}
+.clock-block span {font-size:9px; letter-spacing:.8px}
+.preview-workspace {display:grid; grid-template-columns:minmax(0,1.15fr) minmax(330px,.85fr); align-items:start; gap:13px}
+.preview-deck,.preview-help,.audio-channel,.audio-limits-panel {min-width:0}
+.preview-deck-body {display:flex; flex-direction:column; gap:12px; padding:17px}
+.audio-field {display:flex; flex-direction:column; gap:7px; min-width:0; color:#9aadb3; font-size:10px; font-weight:800; letter-spacing:.45px}
+.audio-field select {width:100%; min-width:0; padding:10px 11px; color:#edf3f4; background:#0e1519; border:1px solid #35464d; border-radius:4px; font-size:12px; font-weight:400}
+.preview-current {display:flex; align-items:center; gap:14px; min-width:0; padding:14px; border:1px solid #293f39; border-radius:5px; background:linear-gradient(120deg,#172b26,#141c20 70%)}
+.preview-art {display:grid; place-items:center; width:60px; height:60px; flex:0 0 60px; border:1px solid #3d6e5a; border-radius:5px; color:#92e6c2; background:#1b3a2e; font-size:29px}
+.preview-current-meta {display:flex; flex-direction:column; gap:5px; min-width:0}
+.preview-current-meta b {overflow-wrap:anywhere; color:#f0f5f6; font-size:14px; line-height:1.35}
+.preview-current-meta small {color:#9aadb3; font-size:10px}
+.preview-progress-track {height:5px}
+.preview-transport {display:flex; flex-wrap:wrap; gap:8px; margin-top:4px}
+.preview-transport .btn {min-height:38px}
+.preview-help-content {padding:9px 14px 14px}
+.preview-help-row {display:flex; align-items:flex-start; gap:11px; padding:13px 0; border-bottom:1px solid #29353b}
+.preview-help-row>span {display:grid; place-items:center; width:28px; height:28px; flex:0 0 28px; border:1px solid #35574a; border-radius:4px; color:#90e5bd; background:#172c23; font-size:10px; font-weight:850}
+.preview-help-row b {display:block; color:#e3ecef; font-size:11px}
+.preview-help-row small {display:block; margin-top:4px; color:#91a2a8; font-size:10px; line-height:1.5}
+.preview-help-content .panel-note {margin:10px 0 0; border:0; background:transparent}
+.audio-tech-status {display:flex; flex-wrap:wrap; align-items:center; gap:9px; margin:0 0 13px; padding:11px 13px; border:1px solid #2f4740; border-radius:4px; color:#b6d8ca; background:#14241e; font-size:10px}
+.audio-tech-status .live-led {flex:0 0 6px}
+.audio-tech-status b {flex:1; min-width:180px}
+.audio-tech-grid {display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; align-items:stretch}
+.audio-channel {display:flex; flex-direction:column}
+.audio-channel-body {display:flex; flex:1; flex-direction:column; gap:14px; padding:15px}
+.audio-channel-body p {margin:0; color:#81949b; font-size:10px; line-height:1.55}
+.audio-channel-body .audio-field {margin-bottom:3px}
+.audio-fader-heading {display:flex; align-items:center; justify-content:space-between; gap:10px}
+.audio-fader-heading label {color:#c4d0d4; font-size:11px; font-weight:700}
+.audio-fader-heading b {color:#7de6b6; font-size:15px; font-variant-numeric:tabular-nums}
+.audio-fader {width:100%; margin:0; accent-color:#43d6a0; cursor:pointer}
+.audio-fader:focus-visible {outline:2px solid var(--green); outline-offset:4px}
+.audio-limits-panel {margin-top:13px}
+.audio-limits-body {padding:13px 15px}
+.audio-limits-body p {margin:0 0 9px; color:#9aaab0; font-size:10px; line-height:1.6}
+.audio-limits-body p:last-child {margin-bottom:0}
+.preview-state {font-variant-numeric:tabular-nums}
+@media (min-width:1451px) {
+  .studio-grid {grid-template-columns:minmax(0,1.08fr) minmax(555px,.92fr)}
+}
+@media (min-width:761px) and (max-width:1450px) {
+  .studio-grid {grid-template-columns:minmax(0,1fr)}
+  .studio-main-column,.studio-side-column {display:flex; flex-direction:column; gap:12px}
+  .studio-cart-panel .cart-grid {grid-template-columns:repeat(4,minmax(0,1fr)); max-height:none; overflow:visible}
+}
+@media (max-width:1250px) {
+  .studio-cart-panel .cart-import-toolbar {align-items:flex-start; flex-direction:column}
+  .studio-cart-panel .cart-import-actions {width:100%; justify-content:flex-start}
+}
+@media (max-width:950px) {
+  .preview-workspace {grid-template-columns:minmax(0,1fr)}
+  .audio-tech-grid {grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:760px) {
+  .clock-block {min-width:100px}
+  .clock-block b {font-size:20px}
+  .clock-block small {font-size:7px}
+  .studio-cart-panel .cart-grid {grid-template-columns:repeat(3,minmax(0,1fr)); gap:7px; max-height:none; overflow:visible}
+  .studio-cart-panel .cart-pad {min-height:120px}
+  .studio-cart-panel .cart-import-actions {flex-wrap:wrap}
+  .audio-tech-grid {grid-template-columns:minmax(0,1fr)}
+  .audio-tech-status {align-items:flex-start}
+}
+@media (max-width:440px) {
+  .studio-cart-panel .cart-grid {grid-template-columns:repeat(2,minmax(0,1fr))}
+  .studio-cart-panel .cart-pad {min-height:116px}
+  .clock-block {min-width:88px}
+  .clock-block b {font-size:17px}
+  .clock-block span {font-size:7px}
+  .clock-block small {font-size:6px; letter-spacing:.3px}
+  .preview-deck-body {padding:11px}
+}

@@ -580,7 +580,8 @@ async function importFiles(files,options={}){
       const done=()=>{const d=Number.isFinite(probe.duration)?probe.duration:0;probe.removeAttribute("src");probe.load();resolve(d);};
       probe.onloadedmetadata=done;probe.onerror=()=>resolve(0);probe.src=url;
     });
-    const type=forcedType||classify(file.name);
+    const inferredType=forcedType||classify(file.name);
+    const type=options.assignCart===true&&!["jingle","spot","track"].includes(inferredType)?"jingle":inferredType;
     const m={id,name:file.name,type,url,file,blob:file,duration,size:file.size,lastModified:file.lastModified};
     try{
       await dbPut("media",{id,name:file.name,type,duration,size:file.size,lastModified:file.lastModified,blob:file});
@@ -615,10 +616,11 @@ async function removeMedia(id){
   if(current&&current.id===id){stopPlayback("Faixa removida.");current=null;}
   media=media.filter(x=>x.id!==id);queue=queue.filter(x=>x.id!==id);
   schedules=schedules.filter(x=>x.mediaId!==id);campaigns=campaigns.filter(x=>x.mediaId!==id);
-  try{await dbDelete("media",id);}catch(_){}
+  cartSlots=cartSlots.map(slotId=>slotId===id?null:slotId);
+  try{await dbDelete("media",id);}catch(_){} 
   if(urlSet.has(m.url)){URL.revokeObjectURL(m.url);urlSet.delete(m.url);}
   writeLog("media-delete","Removido: "+m.name,{mediaId:id,title:m.name,type:m.type,result:"removido localmente"});
-  drawLibrary();drawQueue();drawSchedules();drawCampaigns();renderCurrent();persistState();
+  drawLibrary();drawQueue();drawSchedules();drawCampaigns();drawCarts();renderCurrent();persistState();
   if(auto&&current===null&&queue.length&&!currentCart)next();
 }
 function scheduleTick(){
@@ -696,7 +698,7 @@ async function deleteAllMedia(){
   if(currentCart)stopCartPlayback(true);
   current=null;
   for(const url of urlSet)URL.revokeObjectURL(url);
-  urlSet.clear();media=[];queue=[];schedules=[];campaigns=[];
+  urlSet.clear();media=[];queue=[];schedules=[];campaigns=[];cartSlots=Array(CART_SLOT_COUNT).fill(null);jingleRotation={enabled:false,every:3,counter:0,index:0};
   await dbClear("media");await persistState();renderEverything();
   writeLog("system","Biblioteca local removida",{result:"ação manual"});
   showToast("Biblioteca local removida.");
@@ -713,7 +715,7 @@ function restoreMainVolume(){
 }
 function stopCartPlayback(write=true){
   const prior=currentCart;cartAudio.pause();try{cartAudio.currentTime=0;}catch(_){}
-  currentCart=null;restoreMainVolume();$("cartNowLabel").textContent="Cartwall aguardando disparo";
+  currentCart=null;restoreMainVolume();$("cartNowLabel").textContent="Cartwall aguardando disparo";drawCarts();persistState();
   if(prior&&write)writeLog("cart-stop","Disparo interrompido: "+prior.name,{mediaId:prior.id,title:prior.name,type:prior.type,source:prior.source,result:"interrompido"});
 }
 function playCart(m,source="cartwall"){
@@ -721,11 +723,11 @@ function playCart(m,source="cartwall"){
   currentCart={id:m.id,name:m.name,type:m.type,source};
   if(!mainAudio.paused&&!mainAudio.ended){mainVolumeBeforeCart=mainAudio.volume;mainAudio.volume=Math.min(mainVolumeBeforeCart,0.30);cartDuckApplied=true;$("cartDuckingLabel").textContent="Programa atenuado";}
   else $("cartDuckingLabel").textContent="Sem programa principal";
-  $("cartNowLabel").textContent=m.name;setCartStatus("DISPARANDO",true);cartAudio.src=m.url;cartAudio.currentTime=0;cartAudio.load();
+  $("cartNowLabel").textContent=m.name;setCartStatus("DISPARANDO",true);drawCarts();cartAudio.src=m.url;cartAudio.currentTime=0;cartAudio.load();
   writeLog("cart-start","Cartwall: "+m.name,{mediaId:m.id,title:m.name,type:m.type,source,result:"disparo iniciado"});
   cartAudio.play().catch(err=>{const failed=currentCart;stopCartPlayback(false);if(failed)writeLog("play-error","Falha no disparo: "+failed.name,{mediaId:failed.id,title:failed.name,type:failed.type,source,result:err.name||"erro"});showToast("Não foi possível disparar este áudio. Verifique o arquivo e tente novamente.",true);});
 }
-function finishCartPlayback(){const finished=currentCart;currentCart=null;restoreMainVolume();$("cartNowLabel").textContent="Cartwall aguardando disparo";if(finished)writeLog("cart-complete","Disparo concluído: "+finished.name,{mediaId:finished.id,title:finished.name,type:finished.type,source:finished.source,result:"concluído"});if(auto&&mainAudio.paused&&queue.length)next();}
+function finishCartPlayback(){const finished=currentCart;currentCart=null;restoreMainVolume();$("cartNowLabel").textContent="Cartwall aguardando disparo";drawCarts();persistState();if(finished)writeLog("cart-complete","Disparo concluído: "+finished.name,{mediaId:finished.id,title:finished.name,type:finished.type,source:finished.source,result:"concluído"});if(auto&&mainAudio.paused&&queue.length)next();}
 function buildRotationBlock(){
   const count=Math.max(1,Math.min(20,Number($("rotationCount").value)||8));
   const blocked=new Set(queue.map(m=>m.id));if(current)blocked.add(current.id);
@@ -818,7 +820,16 @@ function bindEvents(){
     const goto=e.target.closest("[data-go]");if(goto)showView(goto.dataset.go);
     const newsUse=e.target.closest("[data-news-use]");if(newsUse){addNewsToNotes(newsUse.dataset.newsUse);return;}
     const obsScene=e.target.closest("[data-obs-scene]");if(obsScene){setObsProgramScene(obsScene.dataset.obsScene);return;}
-    const playBtn=e.target.closest("[data-media-play],[data-cart-play]");if(playBtn){const id=playBtn.dataset.mediaPlay||playBtn.dataset.cartPlay;const m=findMedia(id);if(m){if(playBtn.dataset.cartPlay)playCart(m,"cartwall");else play(m,"biblioteca");}}
+    const slotFire=e.target.closest("[data-cart-slot-play]");
+    if(slotFire){const index=Number(slotFire.dataset.cartSlotPlay),m=findMedia(cartSlots[index]);if(m)playCart(m,"cartwall slot "+String(index+1).padStart(2,"0"));return;}
+    const slotLoad=e.target.closest("[data-cart-slot-load]");
+    if(slotLoad){pendingCartSlot=Number(slotLoad.dataset.cartSlotLoad);$("cartSlotInput").click();return;}
+    const slotClear=e.target.closest("[data-cart-slot-clear]");
+    if(slotClear){const index=Number(slotClear.dataset.cartSlotClear);if(Number.isInteger(index)&&index>=0&&index<CART_SLOT_COUNT){cartSlots[index]=null;drawCarts();persistState();showToast("Slot "+String(index+1).padStart(2,"0")+" esvaziado.");}return;}
+    const revealAll=e.target.closest("[data-cart-filter-show]");
+    if(revealAll){cartFilter="all";document.querySelectorAll("[data-cart-filter]").forEach(x=>x.classList.toggle("active",x.dataset.cartFilter==="all"));drawCarts();return;}
+    const playBtn=e.target.closest("[data-media-play]");
+    if(playBtn){const m=findMedia(playBtn.dataset.mediaPlay);if(m)play(m,"biblioteca");}
     const queued=e.target.closest("[data-media-queue]");
     if(queued)addQueue(findMedia(queued.dataset.mediaQueue));
     const remove=e.target.closest("[data-remove]");
@@ -841,6 +852,27 @@ function bindEvents(){
   $("importBtn").addEventListener("click",()=>$("fileInput").click());
   $("importBtnLibrary").addEventListener("click",()=>$("fileInput").click());
   $("fileInput").addEventListener("change",async e=>{await importFiles(e.target.files);e.target.value="";});
+  document.querySelectorAll("[data-cart-import]").forEach(button=>button.addEventListener("click",()=>{
+    const inputId=({jingle:"cartImportJingleInput",spot:"cartImportSpotInput",track:"cartImportTrackInput"})[button.dataset.cartImport];
+    if(inputId)$(inputId).click();
+  }));
+  for(const [inputId,type] of [["cartImportJingleInput","jingle"],["cartImportSpotInput","spot"],["cartImportTrackInput","track"]]){
+    $(inputId).addEventListener("change",async e=>{await importFiles(e.target.files,{forcedType:type,assignCart:true});e.target.value="";drawCarts();persistState();});
+  }
+  $("cartSlotInput").addEventListener("change",async e=>{
+    const files=e.target.files,targetSlot=pendingCartSlot;pendingCartSlot=null;
+    const forcedType=cartFilter==="all"?null:cartFilter;
+    if(files&&files.length)await importFiles(files,{forcedType,targetSlot,assignCart:true});
+    e.target.value="";drawCarts();persistState();
+  });
+  $("jingleRotationEnabled").addEventListener("change",async e=>{
+    jingleRotation.enabled=e.target.checked;refreshJingleRotationUI();await persistState();
+    showToast(jingleRotation.enabled?"Inserção automática de vinhetas ativada.":"Inserção automática de vinhetas desativada.");
+  });
+  $("jingleRotationEvery").addEventListener("change",async e=>{
+    jingleRotation.every=Math.max(2,Math.min(12,Number(e.target.value)||3));refreshJingleRotationUI();await persistState();
+    showToast("Vinheta automática configurada a cada "+jingleRotation.every+" músicas.");
+  });
   $("search").addEventListener("input",drawLibrary);
   document.querySelectorAll("[data-filter]").forEach(b=>b.addEventListener("click",()=>{
     filter=b.dataset.filter;document.querySelectorAll("[data-filter]").forEach(x=>x.classList.toggle("active",x===b));drawLibrary();

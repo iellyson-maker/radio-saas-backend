@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: radioos-studio-web
+    runtime: node
+    plan: free
+    rootDir: web
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health

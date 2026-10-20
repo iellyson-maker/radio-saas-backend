@@ -52,6 +52,7 @@ jobs:
         run: |
           set -euo pipefail
           EXPECTED_VERSION="$(node -p "require('./web/package.json').version")"
+          export EXPECTED_VERSION
           for attempt in $(seq 1 36); do
             if curl --fail --silent --show-error --max-time 15 "$QOLAN_URL/health" -o /tmp/qolan-health.json; then
               if node -e 'const fs=require("node:fs"); const h=JSON.parse(fs.readFileSync("/tmp/qolan-health.json","utf8")); process.exit(h.ok && h.product === "Qolan Studio" && h.version === process.env.EXPECTED_VERSION ? 0 : 1)' ; then

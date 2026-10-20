@@ -32,7 +32,6 @@ let fadeTimer = null;
 let activeSession = null;
 let pendingSource = "manual";
 let toastTimer = null;
-let lastSchedulerMinute = "";
 let urlSet = new Set();
 let currentCart = null;
 let cartDuckApplied = false;
@@ -361,7 +360,10 @@ function play(m,source="manual"){
   if(!m)return;
   if(activeSession)finishSession("interrompida");
   mainAudio.pause();
-  mainAudio.volume=1;
+  if(currentCart){
+    if(!cartDuckApplied){mainVolumeBeforeCart=1;cartDuckApplied=true;}
+    mainAudio.volume=Math.min(mainVolumeBeforeCart,0.30);
+  }else mainAudio.volume=1;
   current=m;
   pendingSource=source;
   mainAudio.src=m.url;
@@ -384,7 +386,7 @@ function play(m,source="manual"){
 }
 function next(){
   clearInterval(fadeTimer);
-  mainAudio.volume=1;
+  mainAudio.volume=currentCart?(cartDuckApplied?Math.min(mainVolumeBeforeCart,0.30):1):1;
   if(queue.length){
     const m=queue.shift();
     persistState();drawQueue();
@@ -431,7 +433,7 @@ function fadeNext(){
     step++;
     mainAudio.volume=Math.max(0,start*(1-step/steps));
     if(step>=steps){
-      clearInterval(fadeTimer);fadeTimer=null;mainAudio.volume=1;$("fadeBtn").disabled=false;
+      clearInterval(fadeTimer);fadeTimer=null;mainAudio.volume=currentCart?(cartDuckApplied?Math.min(mainVolumeBeforeCart,0.30):1):1;$("fadeBtn").disabled=false;
       if(activeSession)finishSession("fade-out");
       next();
     }
@@ -530,9 +532,6 @@ async function removeMedia(id){
 function scheduleTick(){
   if(!auto||!db)return;
   const due=core.collectDueItems(schedules,campaigns,id=>findMedia(id),now(),settings.timezone);
-  const minute=due.minuteKey.replace("@"," ");
-  if(minute===lastSchedulerMinute)return;
-  lastSchedulerMinute=minute;
   if(!due.events.length)return;
   queue.unshift(...due.events.map(event=>event.media));
   for(const event of due.events){

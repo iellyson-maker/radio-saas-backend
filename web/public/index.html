@@ -1,9 +1,164 @@
 <!doctype html>
-<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#101416"><meta name="description" content="Qolan Studio — console de áudio para operação de rádio no Qolan Studio."><title>Qolan Studio</title><link rel="stylesheet" href="/styles.css"></head>
-<body><header><div class="brand"><span class="logo">Q</span><div><b>QOLAN</b><small>STUDIO • WEB PLAYOUT</small></div></div><div class="station"><i></i><span id="mode">MODO MANUAL</span> · <b id="stationName">Rádio Central · 98.7 FM</b></div><div class="clock" id="clock">--:--:--</div></header>
-<nav><button id="importBtn">＋ IMPORTAR ÁUDIO</button><input id="fileInput" type="file" accept="audio/*,.mp3,.wav,.ogg,.flac,.m4a,.aac" multiple hidden><button id="autoBtn">AUTOMAÇÃO: OFF</button><button id="clearQueue">LIMPAR FILA</button><span class="status" id="status">PRONTO</span></nav>
-<main><section class="panel library"><h2>BIBLIOTECA <small id="count">0 arquivos</small></h2><input id="search" placeholder="Pesquisar por nome..."><div class="filters"><button data-filter="all" class="active">TODOS</button><button data-filter="music">MÚSICAS</button><button data-filter="jingle">VINHETAS</button><button data-filter="spot">COMERCIAIS</button><button data-filter="track">TRILHAS</button></div><div id="libraryList" class="list empty">Importe arquivos de áudio para começar.</div></section>
-<section class="panel onair"><h2>NO AR <small id="playState">PARADO</small></h2><div class="now"><div class="art">♫</div><div class="trackinfo"><h1 id="currentTitle">Nenhuma faixa</h1><p id="currentMeta">Importe um áudio para iniciar.</p><div class="progress"><span id="progress"></span></div><div class="times"><span id="elapsed">00:00</span><span id="duration">00:00</span></div></div></div><audio id="audio"></audio><div class="controls"><button id="prevBtn">◀◀</button><button id="playBtn" class="primary">▶</button><button id="stopBtn">■</button><button id="nextBtn">▶▶</button><button id="fadeBtn">FADE</button><button id="segueBtn">SEGUE: OFF</button></div><div class="meters"><label>L <span id="leftMeter"></span></label><label>R <span id="rightMeter"></span></label></div></section>
-<section class="panel cartwall"><h2>CARTUCHEIRA <small>DISPARO MANUAL</small></h2><div id="cartList" class="carts empty">Os áudios importados aparecerão aqui.</div></section>
-<section class="panel queue"><h2>PRÓXIMOS <small id="queueCount">0 itens</small></h2><div id="queueList" class="list empty">Fila vazia. Adicione áudios pela biblioteca.</div></section>
-<section class="panel log"><h2>LOG DE OPERAÇÃO <button id="exportLog">EXPORTAR</button></h2><div id="logList"></div></section></main><footer><span>QOLAN STUDIO WEB 0.1.0</span><span id="health">Verificando serviço…</span><span>Áudio local neste navegador · não é transmissão 24/7</span></footer><script src="/app.js"></script></body></html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0b1115">
+  <meta name="description" content="Qolan Studio — console de operação de rádio com biblioteca, playlists, programação e relatórios locais.">
+  <title>Qolan Studio | Console de Rádio</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <a class="brand" href="#" aria-label="Qolan Studio início">
+      <span class="brand-mark">Q</span>
+      <span><b>QOLAN</b><small>STUDIO</small></span>
+    </a>
+    <div class="station-card"><span class="eyebrow">EMISSORA ATIVA</span><b id="sidebarStation">Rádio Central</b><span id="sidebarFrequency">98.7 FM</span><span class="local-tag"><i></i> CONSOLE LOCAL</span></div>
+    <nav class="side-nav" aria-label="Navegação principal">
+      <span class="nav-label">OPERAÇÃO</span>
+      <button class="nav-item active" data-view="console"><span class="nav-icon">◫</span> Console <kbd>F10</kbd></button>
+      <button class="nav-item" data-view="library"><span class="nav-icon">♫</span> Biblioteca</button>
+      <button class="nav-item" data-view="programming"><span class="nav-icon">◷</span> Programação</button>
+      <button class="nav-item" data-view="commercials"><span class="nav-icon">▣</span> Comerciais</button>
+      <span class="nav-label">CONTROLE</span>
+      <button class="nav-item" data-view="logs"><span class="nav-icon">≡</span> Prova de veiculação</button>
+      <button class="nav-item" data-view="diagnostics"><span class="nav-icon">⌁</span> Diagnóstico</button>
+      <button class="nav-item" data-view="settings"><span class="nav-icon">⚙</span> Configurações</button>
+    </nav>
+    <div class="sidebar-bottom"><div class="version-row"><span>QOLAN WEB</span><b>0.2.0</b></div><p>Versão web de avaliação. Não é um motor de transmissão 24/7.</p></div>
+  </aside>
+
+  <div class="work-area">
+    <header class="topbar">
+      <div class="breadcrumb"><span>QOLAN</span><span class="slash">/</span><b id="viewTitle">Console de operação</b></div>
+      <div class="topbar-right"><span class="mode-chip"><i id="modeDot"></i><span id="modeLabel">MANUAL</span></span><div class="clock-block"><span id="dateLabel">--</span><b id="clock">--:--:--</b></div><button class="avatar" id="settingsShortcut" title="Configurações">Q</button></div>
+    </header>
+
+    <div class="commandbar">
+      <div class="command-left"><span class="live-led"></span><b id="status">SISTEMA PRONTO</b><span class="command-divider"></span><span id="health" class="muted">Verificando serviço…</span></div>
+      <div class="command-actions"><input id="fileInput" type="file" accept="audio/*,.mp3,.wav,.ogg,.flac,.m4a,.aac,.opus" multiple hidden><button class="btn btn-quiet" id="importBtn">＋ Importar áudio</button><button class="btn btn-primary" id="autoBtn">▶ Ativar automação local</button></div>
+    </div>
+
+    <main class="content">
+      <section class="view active" id="view-console">
+        <div class="page-heading"><div><span class="eyebrow">VISÃO GERAL</span><h1>Console de operação</h1><p>Controle rápido da reprodução, fila e disparos.</p></div><div class="heading-meta"><span class="local-tag"><i></i> DADOS NESTE NAVEGADOR</span></div></div>
+        <div class="stat-grid">
+          <article class="stat-card"><span>NO AR</span><b id="statNow">—</b><small id="statNowMeta">Nenhuma faixa</small></article>
+          <article class="stat-card"><span>BIBLIOTECA</span><b id="statMedia">0</b><small>arquivos indexados localmente</small></article>
+          <article class="stat-card"><span>NA FILA</span><b id="statQueue">0</b><small>itens aguardando reprodução</small></article>
+          <article class="stat-card"><span>VEICULAÇÕES HOJE</span><b id="statPlays">0</b><small>registros desta sessão local</small></article>
+        </div>
+        <div class="console-grid">
+          <section class="panel player-panel">
+            <div class="panel-head"><div><span class="eyebrow">SAÍDA DE ÁUDIO</span><h2>NO AR</h2></div><span class="state-pill" id="playState">PARADO</span></div>
+            <div class="onair-display"><div class="album-art"><span>Q</span><i>♫</i></div><div class="track-details"><h3 id="currentTitle">Nenhuma faixa selecionada</h3><p id="currentMeta">Importe áudio ou selecione um item na biblioteca.</p><div class="progress-track"><span id="progress"></span></div><div class="time-row"><span id="elapsed">00:00</span><span id="duration">00:00</span></div></div></div>
+            <audio id="audio" preload="metadata"></audio>
+            <div class="transport">
+              <button id="prevBtn" title="Reiniciar faixa">↶</button><button id="playBtn" class="transport-play" title="Reproduzir/pausar">▶</button><button id="stopBtn" title="Parar">■</button><button id="nextBtn" title="Próxima faixa">▶▶</button><span class="transport-spacer"></span><button id="fadeBtn" title="Fade-out de 2,5 segundos">FADE</button><button id="segueBtn" title="Avançar automaticamente ao fim da faixa">SEGUE: OFF</button>
+            </div>
+            <div class="meter-block"><div class="meter-heading"><span>NÍVEL DE ÁUDIO</span><span>RMS L / R</span></div><div class="meter-row"><b>L</b><div class="meter-track"><span id="leftMeter"></span></div><small id="leftDb">— dB</small></div><div class="meter-row"><b>R</b><div class="meter-track"><span id="rightMeter"></span></div><small id="rightDb">— dB</small></div></div>
+            <div class="player-footer"><span id="sourceLabel">FONTE: —</span><span id="audioContextState">ÁUDIO AGUARDANDO</span></div>
+          </section>
+
+          <section class="panel queue-panel">
+            <div class="panel-head"><div><span class="eyebrow">SEQUÊNCIA DE EXECUÇÃO</span><h2>Próximos itens</h2></div><button class="btn btn-quiet btn-small" id="clearQueue">Limpar fila</button></div>
+            <div class="queue-summary"><b id="queueCount">0 itens</b><span>Reordene com as setas</span></div><div id="queueList" class="record-list empty-state">Adicione itens pela biblioteca.</div>
+            <div class="queue-foot"><button class="btn btn-quiet" data-go="library">Abrir biblioteca →</button><button class="btn btn-quiet" id="saveQueueBtn">Salvar fila local</button></div>
+          </section>
+
+          <section class="panel cart-panel">
+            <div class="panel-head"><div><span class="eyebrow">DISPARO INSTANTÂNEO</span><h2>Cartucheira</h2></div><span class="subtle">F1–F9</span></div>
+            <div class="cart-tabs"><button class="active" data-cart-filter="all">TODOS</button><button data-cart-filter="jingle">VINHETAS</button><button data-cart-filter="spot">COMERCIAIS</button><button data-cart-filter="track">TRILHAS</button></div>
+            <div id="cartList" class="cart-grid empty-state">Importe vinhetas, comerciais ou trilhas para montar a cartucheira.</div>
+            <p class="panel-note">O disparo substitui a reprodução principal nesta versão web. O motor profissional com canais independentes será desenvolvido na engine local.</p>
+          </section>
+          <section class="panel activity-panel">
+            <div class="panel-head"><div><span class="eyebrow">ATIVIDADE RECENTE</span><h2>Eventos da operação</h2></div><button class="btn btn-quiet btn-small" data-go="logs">Ver registros →</button></div>
+            <div id="recentLogs" class="record-list empty-state">Ainda não há eventos registrados.</div>
+          </section>
+        </div>
+        <div class="notice"><span>i</span><p><b>Modo de operação atual:</b> reprodução e agendamentos rodam neste navegador. Fechar a página interrompe a automação. Use esta versão para avaliação, não como transmissor principal 24/7.</p></div>
+      </section>
+
+      <section class="view" id="view-library">
+        <div class="page-heading"><div><span class="eyebrow">ACERVO DA EMISSORA</span><h1>Biblioteca de mídia</h1><p>Importe, classifique, pesquise e envie arquivos para a fila.</p></div><button class="btn btn-primary" id="importBtnLibrary">＋ Importar arquivos</button></div>
+        <section class="panel full-panel">
+          <div class="library-tools"><input id="search" class="search-input" placeholder="Pesquisar título do arquivo…" type="search"><div class="filter-group"><button class="active" data-filter="all">Todos</button><button data-filter="music">Músicas</button><button data-filter="jingle">Vinhetas</button><button data-filter="spot">Comerciais</button><button data-filter="track">Trilhas</button></div></div>
+          <div class="table-wrap"><table class="media-table"><thead><tr><th>TÍTULO / ARQUIVO</th><th>CATEGORIA</th><th>DURAÇÃO</th><th>TAMANHO</th><th>AÇÕES</th></tr></thead><tbody id="libraryList"><tr><td colspan="5" class="empty-cell">Importe arquivos de áudio para começar.</td></tr></tbody></table></div>
+          <div class="panel-foot"><span id="libraryFoot">0 arquivos</span><span>Os áudios são armazenados no IndexedDB deste navegador.</span></div>
+        </section>
+      </section>
+
+      <section class="view" id="view-programming">
+        <div class="page-heading"><div><span class="eyebrow">REGRAS LOCAIS</span><h1>Programação</h1><p>Agende execuções por dia e horário nesta instância do navegador.</p></div><span class="state-pill warning-pill">LOCAL • ABA ABERTA</span></div>
+        <div class="split-grid">
+          <section class="panel form-panel"><div class="panel-head"><div><span class="eyebrow">NOVO EVENTO</span><h2>Agendamento de áudio</h2></div></div>
+            <form id="scheduleForm" class="form-grid">
+              <label>Nome do evento<input id="scheduleLabel" maxlength="100" required placeholder="Ex.: Identificação das 09h"></label>
+              <label>Áudio<select id="scheduleMedia" required><option value="">Importe primeiro um áudio</option></select></label>
+              <div class="form-row"><label>Horário<input id="scheduleTime" type="time" required value="09:00"></label><label>Dia da semana<select id="scheduleDay"><option value="*">Todos os dias</option><option value="0">Domingo</option><option value="1">Segunda-feira</option><option value="2">Terça-feira</option><option value="3">Quarta-feira</option><option value="4">Quinta-feira</option><option value="5">Sexta-feira</option><option value="6">Sábado</option></select></label></div>
+              <button class="btn btn-primary" type="submit">＋ Adicionar à programação</button>
+            </form><p class="panel-note">O evento só dispara se a página estiver aberta e a automação local estiver ligada. Não é um scheduler de servidor.</p>
+          </section>
+          <section class="panel"><div class="panel-head"><div><span class="eyebrow">GRADE DE EVENTOS</span><h2>Agendamentos ativos</h2></div><span id="scheduleCount" class="subtle">0 eventos</span></div><div id="scheduleList" class="record-list empty-state">Nenhum evento agendado.</div></section>
+        </div>
+      </section>
+
+      <section class="view" id="view-commercials">
+        <div class="page-heading"><div><span class="eyebrow">OPERAÇÃO COMERCIAL</span><h1>Campanhas e comerciais</h1><p>Cadastre campanhas locais e programe um horário de inserção.</p></div><span class="state-pill warning-pill">MVP LOCAL</span></div>
+        <div class="split-grid">
+          <section class="panel form-panel"><div class="panel-head"><div><span class="eyebrow">CADASTRO</span><h2>Nova campanha</h2></div></div>
+            <form id="campaignForm" class="form-grid">
+              <label>Nome da campanha<input id="campaignName" maxlength="120" required placeholder="Ex.: Mercado Bom Preço"></label>
+              <label>Spot de áudio<select id="campaignMedia" required><option value="">Importe/com classifique um comercial</option></select></label>
+              <div class="form-row"><label>Início<input id="campaignStart" type="date" required></label><label>Fim<input id="campaignEnd" type="date" required></label></div>
+              <div class="form-row"><label>Horário de inserção<input id="campaignTime" type="time" value="12:00" required></label><label>Dia<select id="campaignDay"><option value="*">Todos os dias</option><option value="0">Domingo</option><option value="1">Segunda-feira</option><option value="2">Terça-feira</option><option value="3">Quarta-feira</option><option value="4">Quinta-feira</option><option value="5">Sexta-feira</option><option value="6">Sábado</option></select></label></div>
+              <button class="btn btn-primary" type="submit">＋ Cadastrar campanha</button>
+            </form><p class="panel-note">Cada campanha deste MVP agenda uma inserção diária conforme dia/horário. Controle de contratos, faturamento e mapas comerciais ainda não está conectado.</p>
+          </section>
+          <section class="panel"><div class="panel-head"><div><span class="eyebrow">PLANO DE INSERÇÕES</span><h2>Campanhas cadastradas</h2></div><span id="campaignCount" class="subtle">0 campanhas</span></div><div id="campaignList" class="record-list empty-state">Nenhuma campanha cadastrada.</div></section>
+        </div>
+      </section>
+
+      <section class="view" id="view-logs">
+        <div class="page-heading"><div><span class="eyebrow">AUDITORIA LOCAL</span><h1>Prova de veiculação</h1><p>Registros de início, término, interrupção e falha de reprodução.</p></div><div class="button-row"><button class="btn btn-quiet" id="exportJson">Exportar JSON</button><button class="btn btn-primary" id="exportCsv">Exportar CSV</button></div></div>
+        <section class="panel full-panel"><div class="panel-head"><div><span class="eyebrow">HISTÓRICO</span><h2>Execuções registradas</h2></div><span id="logCount" class="subtle">0 registros</span></div><div class="table-wrap"><table class="media-table"><thead><tr><th>DATA / HORA</th><th>EVENTO</th><th>MÍDIA</th><th>DURAÇÃO EXECUTADA</th><th>RESULTADO</th></tr></thead><tbody id="logTable"><tr><td colspan="5" class="empty-cell">Nenhum registro.</td></tr></tbody></table></div><div class="panel-foot"><span>Registro local no navegador</span><button class="text-button" id="clearLogs">Limpar histórico local</button></div></section>
+        <div class="notice"><span>!</span><p><b>Não é prova legal de transmissão:</b> os registros são gerados pelo player do navegador, não por uma engine de transmissão autenticada. O registro de veiculação verificável e sincronizado será parte do backend profissional.</p></div>
+      </section>
+
+      <section class="view" id="view-diagnostics">
+        <div class="page-heading"><div><span class="eyebrow">OBSERVABILIDADE</span><h1>Diagnóstico do sistema</h1><p>Estado do serviço web e capacidades desta sessão.</p></div><button class="btn btn-quiet" id="refreshDiagnostics">Atualizar diagnóstico</button></div>
+        <div class="diagnostic-grid">
+          <article class="diagnostic-card"><span class="eyebrow">SERVIDOR WEB</span><b id="diagServer">Verificando…</b><small id="diagServerDetail">Endpoint /health</small></article>
+          <article class="diagnostic-card"><span class="eyebrow">ARMAZENAMENTO</span><b id="diagStorage">Verificando…</b><small id="diagStorageDetail">IndexedDB</small></article>
+          <article class="diagnostic-card"><span class="eyebrow">MOTOR DE ÁUDIO</span><b id="diagAudio">Não iniciado</b><small id="diagAudioDetail">Web Audio API</small></article>
+          <article class="diagnostic-card"><span class="eyebrow">MODO DE AUTOMAÇÃO</span><b id="diagMode">Manual</b><small>Válido somente com a página aberta</small></article>
+        </div>
+        <section class="panel"><div class="panel-head"><div><span class="eyebrow">LIMITAÇÕES CONHECIDAS</span><h2>Estado real das funcionalidades</h2></div></div><div class="capability-list">
+          <div><span class="cap-dot ok"></span><span><b>Reprodução e controle local</b><small>Player do navegador com controles básicos e nível de áudio estimado via Web Audio.</small></span><strong>DISPONÍVEL</strong></div>
+          <div><span class="cap-dot ok"></span><span><b>Persistência de biblioteca</b><small>Arquivos e estado salvos no IndexedDB deste navegador.</small></span><strong>DISPONÍVEL</strong></div>
+          <div><span class="cap-dot warn"></span><span><b>Agendamento local</b><small>Depende de aba aberta, automação ativada e permissão de reprodução do navegador.</small></span><strong>LIMITADO</strong></div>
+          <div><span class="cap-dot off"></span><span><b>Transmissão 24/7 / streaming</b><small>Requer engine dedicada, processo resiliente e servidor de streaming.</small></span><strong>NÃO IMPLEMENTADO</strong></div>
+          <div><span class="cap-dot off"></span><span><b>Login, sincronização e multiemissora</b><small>Requer API autenticada, banco de dados e controle de isolamento entre organizações.</small></span><strong>NÃO IMPLEMENTADO</strong></div>
+        </div></section>
+      </section>
+
+      <section class="view" id="view-settings">
+        <div class="page-heading"><div><span class="eyebrow">IDENTIDADE DA EMISSORA</span><h1>Configurações</h1><p>Personalize o console neste navegador.</p></div></div>
+        <div class="split-grid">
+          <section class="panel form-panel"><div class="panel-head"><div><span class="eyebrow">EMISSORA</span><h2>Identificação</h2></div></div>
+            <form id="settingsForm" class="form-grid"><label>Nome da rádio<input id="stationNameInput" maxlength="100" required value="Rádio Central"></label><label>Frequência / identificação<input id="stationFrequencyInput" maxlength="50" value="98.7 FM"></label><label>Fuso horário <select id="timezoneInput"><option value="America/Sao_Paulo">Brasília (America/Sao_Paulo)</option><option value="America/Manaus">Manaus (America/Manaus)</option><option value="America/Rio_Branco">Rio Branco (America/Rio_Branco)</option><option value="UTC">UTC</option></select></label><button class="btn btn-primary" type="submit">Salvar configurações</button></form>
+          </section>
+          <section class="panel form-panel"><div class="panel-head"><div><span class="eyebrow">DADOS DESTA SESSÃO</span><h2>Backup e manutenção</h2></div></div><div class="maintenance-actions"><button class="btn btn-quiet" id="backupBtn">Exportar backup de dados</button><button class="btn btn-quiet" id="restoreBtn">Importar backup JSON</button><input id="restoreInput" type="file" accept=".json,application/json" hidden><button class="btn btn-danger" id="clearMediaBtn">Remover biblioteca local</button></div><p class="panel-note">Backup inclui configurações, agenda, campanhas, fila e registros. Os metadados do backup não transportam os arquivos de áudio, que precisam ser importados separadamente.</p></section>
+        </div>
+      </section>
+    </main>
+    <footer class="global-footer"><span>QOLAN STUDIO WEB 0.2.0</span><span id="storageFooter">Preparando armazenamento local…</span><span>Console de avaliação · sem transmissão contínua</span></footer>
+  </div>
+</div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<script src="/app.js"></script>
+</body>
+</html>

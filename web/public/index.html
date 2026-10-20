@@ -11,7 +11,7 @@
     .view { display: none; }
     .view.active { display: block; }
   </style>
-  <link rel="stylesheet" href="/styles.css?v=0.5.1">
+  <link rel="stylesheet" href="/styles.css?v=0.6.0">
 </head>
 <body>
 <div class="shell">
@@ -34,7 +34,7 @@
       <button class="nav-item" data-view="diagnostics"><span class="nav-icon">⌁</span> Diagnóstico</button>
       <button class="nav-item" data-view="settings"><span class="nav-icon">⚙</span> Configurações</button>
     </nav>
-    <div class="sidebar-bottom"><div class="version-row"><span>QOLAN WEB</span><b>0.5.1</b></div><p>Versão web de avaliação. Não é um motor de transmissão 24/7.</p></div>
+    <div class="sidebar-bottom"><div class="version-row"><span>QOLAN WEB</span><b>0.6.0</b></div><p>Versão web de avaliação. Não é um motor de transmissão 24/7.</p></div>
   </aside>
 
   <div class="work-area">
@@ -125,9 +125,21 @@
                 <div class="cart-head-actions"><span id="cartStatus" class="cart-state">SEM DISPARO</span><button id="stopCartBtn" class="btn btn-quiet btn-small" disabled>Parar</button><span class="hotkey-hint">ATALHOS <b>F1–F9</b></span></div>
               </div>
               <audio id="cartAudio" preload="none"></audio>
+              <input id="cartSlotInput" type="file" accept="audio/*,.mp3,.wav,.ogg,.flac,.m4a,.aac,.opus,.wma" hidden>
+              <input id="cartImportJingleInput" type="file" accept="audio/*,.mp3,.wav,.ogg,.flac,.m4a,.aac,.opus,.wma" multiple hidden>
+              <input id="cartImportSpotInput" type="file" accept="audio/*,.mp3,.wav,.ogg,.flac,.m4a,.aac,.opus,.wma" multiple hidden>
+              <input id="cartImportTrackInput" type="file" accept="audio/*,.mp3,.wav,.ogg,.flac,.m4a,.aac,.opus,.wma" multiple hidden>
               <div class="cart-live-label"><span class="cart-live-dot"></span><b id="cartNowLabel">Cartwall aguardando disparo</b><small id="cartDuckingLabel">Áudio de apoio</small></div>
+              <div class="cart-import-toolbar">
+                <div class="cart-import-copy"><b>Cartões de disparo</b><small><span id="cartSlotCount">0/12</span> carregados · clique no cartão para disparar</small></div>
+                <div class="cart-import-actions">
+                  <button type="button" class="btn btn-small btn-primary" data-cart-import="jingle">＋ Vinhetas</button>
+                  <button type="button" class="btn btn-small btn-quiet" data-cart-import="spot">＋ Comerciais</button>
+                  <button type="button" class="btn btn-small btn-quiet" data-cart-import="track">＋ Trilhas</button>
+                </div>
+              </div>
               <div class="cart-tabs"><button class="active" data-cart-filter="all">TODOS</button><button data-cart-filter="jingle">VINHETAS</button><button data-cart-filter="spot">COMERCIAIS</button><button data-cart-filter="track">TRILHAS</button></div>
-              <div id="cartList" class="cart-grid empty-state">Importe vinhetas, comerciais ou trilhas para montar a cartucheira.</div>
+              <div id="cartList" class="cart-grid"></div>
               <p class="panel-note">O cartwall usa um elemento de áudio separado no navegador, mas compartilha a saída do sistema. Saídas físicas independentes exigem a Qolan Engine local.</p>
             </section>
 
@@ -179,6 +191,14 @@
             <label for="rotationCount">Quantidade de faixas<select id="rotationCount"><option value="5">5 faixas</option><option value="8" selected>8 faixas</option><option value="10">10 faixas</option><option value="15">15 faixas</option><option value="20">20 faixas</option></select></label>
             <button type="button" id="buildRotationBtn" class="btn btn-primary">Montar bloco musical →</button></div>
           <div id="rotationSummary" class="rotation-summary">Aguardando montagem. Classifique os arquivos como Música na Biblioteca.</div>
+        </section>
+        <section class="panel jingle-rotation-panel">
+          <div class="panel-head studio-panel-head"><div class="studio-panel-title"><span class="panel-index panel-index-hot">ID</span><div><span class="eyebrow">INSERÇÃO AUTOMÁTICA</span><h2>Vinhetas na rotação</h2></div></div><label class="rotation-toggle"><input id="jingleRotationEnabled" type="checkbox"><span>Ativar inserções</span></label></div>
+          <div class="jingle-rotation-controls">
+            <div><b>Inserir uma vinheta após cada</b><small>O sistema coloca uma vinheta no início da fila depois de concluir a quantidade configurada de músicas.</small></div>
+            <label for="jingleRotationEvery">Intervalo<select id="jingleRotationEvery"><option value="2">2 músicas</option><option value="3" selected>3 músicas</option><option value="4">4 músicas</option><option value="5">5 músicas</option><option value="6">6 músicas</option><option value="8">8 músicas</option><option value="10">10 músicas</option></select></label>
+            <div class="jingle-rotation-state"><span id="jingleRotationStatus" class="state-pill warning-pill">DESATIVADA</span><small id="jingleRotationDetail">Carregue vinhetas na cartwall para habilitar a regra.</small></div>
+          </div>
         </section>
         <div class="split-grid">
           <section class="panel form-panel"><div class="panel-head"><div><span class="eyebrow">NOVO EVENTO</span><h2>Agendamento de áudio</h2></div></div>
@@ -269,11 +289,11 @@
         </div>
       </section>
     </main>
-    <footer class="global-footer"><span>QOLAN STUDIO WEB 0.5.1</span><span id="storageFooter">Preparando armazenamento local…</span><span>Console de avaliação · sem transmissão contínua</span></footer>
+    <footer class="global-footer"><span>QOLAN STUDIO WEB 0.6.0</span><span id="storageFooter">Preparando armazenamento local…</span><span>Console de avaliação · sem transmissão contínua</span></footer>
   </div>
 </div>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
-<script src="/logic.js?v=0.5.1"></script>
-<script src="/app.js?v=0.5.1"></script>
+<script src="/logic.js?v=0.6.0"></script>
+<script src="/app.js?v=0.6.0"></script>
 </body>
 </html>

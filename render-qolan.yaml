@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: qolan-studio-web
+    runtime: node
+    region: oregon
+    plan: free
+    branch: main
+    rootDir: web
+    buildCommand: npm install && npm run check && npm test
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production

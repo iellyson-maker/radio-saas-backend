@@ -11,7 +11,7 @@
     .view { display: none; }
     .view.active { display: block; }
   </style>
-  <link rel="stylesheet" href="/styles.css?v=0.6.1">
+  <link rel="stylesheet" href="/styles.css?v=0.7.0">
 </head>
 <body>
 <div class="shell">
@@ -24,9 +24,13 @@
     <nav class="side-nav" aria-label="Navegação principal">
       <span class="nav-label">OPERAÇÃO</span>
       <button class="nav-item active" data-view="console"><span class="nav-icon">◫</span> Console <kbd>F10</kbd></button>
+      <button class="nav-item" data-view="preview"><span class="nav-icon">🎧</span> Pré-escuta</button>
       <button class="nav-item" data-view="library"><span class="nav-icon">♫</span> Biblioteca</button>
       <button class="nav-item" data-view="programming"><span class="nav-icon">◷</span> Programação</button>
       <button class="nav-item" data-view="commercials"><span class="nav-icon">▣</span> Comerciais</button>
+      <span class="nav-label">ESTÚDIO</span>
+      <button class="nav-item" data-view="audio"><span class="nav-icon">♫</span> Áudio técnico</button>
+      <span class="nav-label">CONTEÚDO</span>
       <button class="nav-item" data-view="live"><span class="nav-icon">▤</span> Conteúdo ao vivo</button>
       <button class="nav-item" data-view="visual"><span class="nav-icon">▧</span> Rádio visual / OBS</button>
       <span class="nav-label">CONTROLE</span>
@@ -34,13 +38,13 @@
       <button class="nav-item" data-view="diagnostics"><span class="nav-icon">⌁</span> Diagnóstico</button>
       <button class="nav-item" data-view="settings"><span class="nav-icon">⚙</span> Configurações</button>
     </nav>
-    <div class="sidebar-bottom"><div class="version-row"><span>QOLAN WEB</span><b>0.6.1</b></div><p>Versão web de avaliação. Não é um motor de transmissão 24/7.</p></div>
+    <div class="sidebar-bottom"><div class="version-row"><span>QOLAN WEB</span><b>0.7.0</b></div><p>Versão web de avaliação. Não é um motor de transmissão 24/7.</p></div>
   </aside>
 
   <div class="work-area">
     <header class="topbar">
       <div class="breadcrumb"><span>QOLAN</span><span class="slash">/</span><b id="viewTitle">Console de operação</b></div>
-      <div class="topbar-right"><span class="mode-chip"><i id="modeDot"></i><span id="modeLabel">MANUAL</span></span><div class="clock-block"><span id="dateLabel">--</span><b id="clock">--:--:--</b></div><button class="avatar" id="settingsShortcut" title="Configurações">Q</button></div>
+      <div class="topbar-right"><span class="mode-chip"><i id="modeDot"></i><span id="modeLabel">MANUAL</span></span><div class="clock-block" aria-label="Relógio da emissora"><span id="dateLabel">--</span><b id="clock">--:--:--</b><small id="clockSource">HORA DA EMISSORA</small></div><button class="avatar" id="settingsShortcut" title="Configurações">Q</button></div>
     </header>
 
     <div class="commandbar">
@@ -140,41 +144,76 @@
               </div>
               <div class="cart-tabs"><button class="active" data-cart-filter="all">TODOS</button><button data-cart-filter="jingle">VINHETAS</button><button data-cart-filter="spot">COMERCIAIS</button><button data-cart-filter="track">TRILHAS</button></div>
               <div id="cartList" class="cart-grid"></div>
-              <p class="panel-note">O cartwall usa um elemento de áudio separado no navegador, mas compartilha a saída do sistema. Saídas físicas independentes exigem a Qolan Engine local.</p>
+              
             </section>
 
-            <div class="studio-support-grid">
-              <section class="panel support-panel news-support">
-                <div class="support-head"><span class="support-icon">≡</span><div><span class="eyebrow">APOIO AO LOCUTOR</span><h2>Redação ao vivo</h2></div><span class="module-ready">MÓDULO</span></div>
-                <div class="support-status"><span class="support-status-dot"></span> FEEDS RSS + PAUTA LOCAL</div>
-                <div class="news-preview">
-                  <div class="news-row"><span class="news-tag">RSS</span><div><b>Manchetes</b><small>Fontes editoriais com link para a matéria original</small></div></div>
-                  <div class="news-row"><span class="news-tag news-tag-muted">LOC</span><div><b>Roteiro do locutor</b><small>Notas salvas neste navegador</small></div></div>
-                </div>
-                <button type="button" class="support-open-button" data-go="live">Abrir redação <span>→</span></button>
-              </section>
-              <section class="panel support-panel visual-support">
-                <div class="support-head"><span class="support-icon support-icon-blue">▣</span><div><span class="eyebrow">RÁDIO VISUAL</span><h2>Controle de vídeo</h2></div><span class="module-ready module-ready-blue">OBS</span></div>
-                <div class="visual-preview">
-                  <div class="visual-preview-top"><span>CONEXÃO LOCAL</span><span class="preview-rec">AGUARDANDO</span></div>
-                  <div class="visual-stage"><span class="visual-q">Q</span><div><b>CENAS DO ESTÚDIO</b><small>CONEXÃO VIA OBS WEBSOCKET</small></div><span class="visual-corner">16:9</span></div>
-                </div>
-                <div class="support-status support-status-blue">CONECTE O OBS PARA CONTROLAR AS CENAS</div>
-                <button type="button" class="support-open-button support-open-blue" data-go="visual">Abrir controle OBS <span>→</span></button>
-              </section>
-            </div>
-
-            <section class="panel activity-panel studio-activity-panel">
-              <div class="panel-head studio-panel-head">
-                <div class="studio-panel-title"><span class="panel-index">B2</span><div><span class="eyebrow">AUDITORIA DA SESSÃO</span><h2>Eventos recentes</h2></div></div>
-                <button class="btn btn-quiet btn-small" data-go="logs">Ver histórico →</button>
-              </div>
-              <div id="recentLogs" class="record-list empty-state">Ainda não há eventos registrados.</div>
-            </section>
           </div>
         </div>
         <div class="notice studio-notice"><span>i</span><p><b>Modo de avaliação:</b> player, biblioteca, fila e agendamentos são locais ao navegador. Fechar a página interrompe a automação. Notícias e rádio visual são apenas áreas conceituais; não há conexão RSS, OBS ou vMix nesta versão.</p></div>
       </section>
+
+      <section class="view" id="view-preview">
+        <div class="page-heading"><div><span class="eyebrow">MONITORAÇÃO • PFL</span><h1>Pré-escuta</h1><p>Ouça e confira um arquivo antes de enviá-lo ao ar. O player de pré-escuta é independente do player principal.</p></div><span class="state-pill" id="previewIsolation">CANAL DE PRÉ-ESCUTA</span></div>
+        <div class="preview-workspace">
+          <section class="panel preview-deck">
+            <div class="panel-head studio-panel-head"><div class="studio-panel-title"><span class="panel-index">PFL</span><div><span class="eyebrow">PROGRAMA FORA DO AR</span><h2>Player de monitoração</h2></div></div><span class="state-pill" id="previewState">PARADO</span></div>
+            <audio id="previewAudio" preload="metadata"></audio>
+            <div class="preview-deck-body">
+              <label class="audio-field">Selecionar áudio da biblioteca<select id="previewMediaSelect"><option value="">Importe arquivos na Biblioteca</option></select></label>
+              <div class="preview-current"><span class="preview-art">♫</span><div class="preview-current-meta"><span class="eyebrow">FAIXA EM PRÉ-ESCUTA</span><b id="previewTitle">Nenhuma faixa selecionada</b><small id="previewMeta">A pré-escuta não altera o programa principal.</small></div></div>
+              <div class="progress-track preview-progress-track"><span id="previewProgress"></span></div>
+              <div class="time-row"><span id="previewElapsed">00:00</span><span>DECORRIDO / TOTAL</span><span id="previewDuration">00:00</span></div>
+              <div class="preview-transport"><button type="button" id="previewPlayBtn" class="btn btn-primary">▶ Iniciar pré-escuta</button><button type="button" id="previewStopBtn" class="btn btn-quiet">■ Parar</button><button type="button" class="btn btn-quiet" data-go="library">Abrir biblioteca</button></div>
+            </div>
+          </section>
+          <section class="panel preview-help">
+            <div class="panel-head studio-panel-head"><div class="studio-panel-title"><span class="panel-index">PFL</span><div><span class="eyebrow">FLUXO DE TRABALHO</span><h2>Como usar a pré-escuta</h2></div></div></div>
+            <div class="preview-help-content">
+              <div class="preview-help-row"><span>01</span><div><b>Selecione a faixa</b><small>Escolha um arquivo que já tenha sido importado para a biblioteca local.</small></div></div>
+              <div class="preview-help-row"><span>02</span><div><b>Ouça antes de colocar no ar</b><small>Use o play e o stop desta página. O áudio principal continua em execução.</small></div></div>
+              <div class="preview-help-row"><span>03</span><div><b>Configure a saída na área técnica</b><small>Em navegadores compatíveis, é possível direcionar a pré-escuta para uma saída diferente.</small></div></div>
+              <button type="button" class="support-open-button" data-go="audio">Abrir configuração técnica de áudio <span>→</span></button>
+              <p class="panel-note">A saída independente depende do suporte do navegador e dos dispositivos de áudio disponíveis no computador. Para monitorização profissional contínua, a Qolan Engine local ainda será necessária.</p>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section class="view" id="view-audio">
+        <div class="page-heading"><div><span class="eyebrow">ESTÚDIO • DISPOSITIVOS E NÍVEIS</span><h1>Áudio técnico</h1><p>Controle os níveis do programa, cartwall e pré-escuta e escolha as saídas de áudio disponíveis no navegador.</p></div><button class="btn btn-quiet" id="refreshAudioDevices">↻ Detectar dispositivos</button></div>
+        <div class="audio-tech-status"><span class="live-led"></span><b id="audioRoutingStatus">Carregando recursos de áudio do navegador…</b><button type="button" class="btn btn-small btn-quiet" id="chooseAudioOutput">Escolher saída de áudio</button></div>
+        <div class="audio-tech-grid">
+          <section class="panel audio-channel">
+            <div class="panel-head studio-panel-head"><div class="studio-panel-title"><span class="panel-index">A1</span><div><span class="eyebrow">PROGRAMA PRINCIPAL</span><h2>Canal de emissão</h2></div></div><span class="state-pill">PROGRAMA</span></div>
+            <div class="audio-channel-body">
+              <label class="audio-field">Dispositivo de saída<select id="mainOutputSelect"><option value="default">Saída padrão do sistema</option></select></label>
+              <div class="audio-fader-heading"><label for="mainVolumeSlider">Volume do programa</label><b id="mainVolumeValue">100%</b></div>
+              <input id="mainVolumeSlider" class="audio-fader" type="range" min="0" max="100" step="1" value="100">
+              <p>Este controle ajusta o nível do player principal no navegador. O navegador pode limitar a seleção de saída.</p>
+            </div>
+          </section>
+          <section class="panel audio-channel">
+            <div class="panel-head studio-panel-head"><div class="studio-panel-title"><span class="panel-index panel-index-hot">B1</span><div><span class="eyebrow">CARTWALL</span><h2>Disparos e efeitos</h2></div></div><span class="state-pill">CARTWALL</span></div>
+            <div class="audio-channel-body">
+              <label class="audio-field">Dispositivo de saída<select id="cartOutputSelect"><option value="default">Saída padrão do sistema</option></select></label>
+              <div class="audio-fader-heading"><label for="cartVolumeSlider">Volume do cartwall</label><b id="cartVolumeValue">75%</b></div>
+              <input id="cartVolumeSlider" class="audio-fader" type="range" min="0" max="100" step="1" value="75">
+              <p>O cartwall possui volume próprio; o atenuador automático do programa continua separado deste ajuste.</p>
+            </div>
+          </section>
+          <section class="panel audio-channel">
+            <div class="panel-head studio-panel-head"><div class="studio-panel-title"><span class="panel-index">PFL</span><div><span class="eyebrow">MONITORAÇÃO</span><h2>Pré-escuta</h2></div></div><span class="state-pill">PFL</span></div>
+            <div class="audio-channel-body">
+              <label class="audio-field">Dispositivo de saída<select id="previewOutputSelect"><option value="default">Saída padrão do sistema</option></select></label>
+              <div class="audio-fader-heading"><label for="previewVolumeSlider">Volume da pré-escuta</label><b id="previewVolumeValue">65%</b></div>
+              <input id="previewVolumeSlider" class="audio-fader" type="range" min="0" max="100" step="1" value="65">
+              <p>Use fones conectados ao dispositivo selecionado para conferir músicas sem interromper o programa principal.</p>
+            </div>
+          </section>
+        </div>
+        <section class="panel audio-limits-panel"><div class="panel-head studio-panel-head"><div class="studio-panel-title"><span class="panel-index">i</span><div><span class="eyebrow">COMPATIBILIDADE</span><h2>Limites técnicos desta versão web</h2></div></div></div><div class="audio-limits-body"><p>As saídas individuais usam APIs do navegador quando disponíveis (por exemplo, seleção de saída em navegadores baseados em Chromium e dispositivos autorizados pelo usuário). Se o navegador não permitir selecionar ou separar as saídas, os canais continuam funcionando na saída padrão; isso não representa um mixer de hardware.</p><p>Esta área não substitui uma mesa física, driver ASIO/WASAPI exclusivo, clock de hardware, processamento DSP profissional ou um serviço local residente. Esses recursos fazem parte da evolução planejada da Qolan Engine para Windows.</p></div></section>
+      </section>
+
 
       <section class="view" id="view-library">
         <div class="page-heading"><div><span class="eyebrow">ACERVO DA EMISSORA</span><h1>Biblioteca de mídia</h1><p>Importe, classifique, pesquise e envie arquivos para a fila.</p></div><button class="btn btn-primary" id="importBtnLibrary">＋ Importar arquivos</button></div>
@@ -291,11 +330,11 @@
         </div>
       </section>
     </main>
-    <footer class="global-footer"><span>QOLAN STUDIO WEB 0.6.1</span><span id="storageFooter">Preparando armazenamento local…</span><span>Console de avaliação · sem transmissão contínua</span></footer>
+    <footer class="global-footer"><span>QOLAN STUDIO WEB 0.7.0</span><span id="storageFooter">Preparando armazenamento local…</span><span>Console de avaliação · sem transmissão contínua</span></footer>
   </div>
 </div>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
-<script src="/logic.js?v=0.6.1"></script>
-<script src="/app.js?v=0.6.1"></script>
+<script src="/logic.js?v=0.7.0"></script>
+<script src="/app.js?v=0.7.0"></script>
 </body>
 </html>

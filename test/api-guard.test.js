@@ -1,23 +1,34 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { app } = require("../server");
+const { requireAdminToken } = require("../server");
 
-test("organization endpoints fail closed without a strong admin token", async () => {
+function invokeGuard(token, authorization) {
+  if (token === null) delete process.env.API_ADMIN_TOKEN;
+  else process.env.API_ADMIN_TOKEN = token;
+  let nextCalled = false;
+  let statusCode = 200;
+  let body = null;
+  const req = { get: name => name.toLowerCase() === "authorization" ? authorization : undefined };
+  const res = {
+    status(code) { statusCode = code; return this; },
+    json(payload) { body = payload; return this; }
+  };
+  requireAdminToken(req, res, () => { nextCalled = true; });
+  return { nextCalled, statusCode, body };
+}
+
+test("organization API guard fails closed without a strong admin token", () => {
   const prior = process.env.API_ADMIN_TOKEN;
-  const server = app.listen(0, "127.0.0.1");
   try {
-    const address = server.address();
-    const url = `http://127.0.0.1:${address.port}/organizations`;
-    delete process.env.API_ADMIN_TOKEN;
-    assert.equal((await fetch(url)).status, 503);
-    process.env.API_ADMIN_TOKEN = "correct-but-not-long-enough";
-    assert.equal((await fetch(url)).status, 503);
-    process.env.API_ADMIN_TOKEN = "x".repeat(48);
-    assert.equal((await fetch(url)).status, 401);
-    assert.equal((await fetch(url, { headers: { authorization: "Bearer " + "y".repeat(48) } })).status, 401);
+    assert.equal(invokeGuard(null, "Bearer test").statusCode, 503);
+    assert.equal(invokeGuard("short", "Bearer short").statusCode, 503);
+    assert.equal(invokeGuard("x".repeat(48), undefined).statusCode, 401);
+    assert.equal(invokeGuard("x".repeat(48), "Bearer " + "y".repeat(48)).statusCode, 401);
+    const accepted = invokeGuard("x".repeat(48), "Bearer " + "x".repeat(48));
+    assert.equal(accepted.nextCalled, true);
+    assert.equal(accepted.statusCode, 200);
   } finally {
     if (prior === undefined) delete process.env.API_ADMIN_TOKEN;
     else process.env.API_ADMIN_TOKEN = prior;
-    await new Promise(resolve => server.close(resolve));
   }
 });

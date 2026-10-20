@@ -152,3 +152,13 @@ A cartucheira recebe 12 identidades de cor persistentes por posição, com fundo
 - Página Áudio técnico com faders de volume de programa, cartwall e pré-escuta, detecção de saídas e seleção de dispositivos conforme as APIs oferecidas pelo navegador.
 - Limite mantido explicitamente: seleção de saída e canais independentes dependem do navegador, permissões e drivers do computador. Isto não é mixer de hardware, driver ASIO/WASAPI dedicado nem engine Windows 24/7. Esse trabalho continua como evolução separada da Qolan Engine.
 - Preferências de volume entram no backup; IDs de saídas físicas são descartados na restauração porque podem pertencer a outro computador. As seleções locais permanecem no armazenamento do navegador.
+
+
+## Qolan Studio 0.8.1 — operação dos cartuchos e roteiro de emissão
+
+- Cartuchos de disparo usam comportamento toggle: o segundo clique no cartucho que está tocando para o disparo atual; clicar em outro cartucho substitui a reprodução no cartwall sem trocar a faixa principal.
+- Filtros de vinheta/comercial/trilha ocultam itens de outras categorias em vez de representar o mesmo cartucho como um falso cartão da categoria selecionada.
+- Slots normalizados não aceitam referências repetidas para o mesmo arquivo; importação em lote ignora mídias já atribuídas e evita duplicação de referência.
+- Pré-escuta tem atalho permanente na barra superior e ação visível no cabeçalho do programa principal, além da página dedicada e da ação na biblioteca.
+- Cabeçalho mais compacto; relógio digital com bezel premium, algarismos monoespaçados e indicação de origem/fuso.
+- Fila de áudio revisada como rundown de radiodifusão: posição, previsão de execução, tipo de evento, título e duração. Destaque visual para o item seguinte.

@@ -424,9 +424,26 @@ function estimatedQueueTime(index){
 function drawQueue(){
   $("queueCount").textContent=queue.length+" itens";$("statQueue").textContent=String(queue.length);
   const el=$("queueList");
-  if(!queue.length){el.className="record-list empty-state";el.textContent="Fila vazia. Monte um bloco musical ou adicione faixas pela biblioteca.";return;}
-  el.className="record-list";
-  el.innerHTML=queue.map((m,i)=>'<div class="record-row queue-record"><span class="row-index">'+String(i+1).padStart(2,"0")+'</span><div class="record-main"><b title="'+escapeHtml(m.name)+'">'+escapeHtml(m.name)+'</b><small><span class="queue-time">PREV. '+estimatedQueueTime(i)+'</span> · '+escapeHtml(CATEGORY_LABELS[m.type]||m.type)+' · '+fmt(m.duration)+'</small></div><div class="row-actions"><button class="icon-button" data-up="'+i+'" title="Mover para cima" '+(i===0?"disabled":"")+' aria-label="Mover para cima">↑</button><button class="icon-button" data-down="'+i+'" title="Mover para baixo" '+(i===queue.length-1?"disabled":"")+' aria-label="Mover para baixo">↓</button><button class="icon-button" data-remove="'+i+'" title="Remover da fila" aria-label="Remover">×</button></div></div>').join("");
+  if(!queue.length){
+    el.className="rundown-list empty-state";
+    el.innerHTML='<div class="rundown-empty"><span class="rundown-empty-mark">≋</span><b>Roteiro aguardando programação</b><small>Adicione músicas pela Biblioteca ou monte um bloco musical. Cada item entra na ordem prevista de veiculação.</small></div>';
+    return;
+  }
+  el.className="rundown-list";
+  el.innerHTML=queue.map((m,i)=>{
+    const type=m.type||"music";
+    const kindClass=type==="spot"?"kind-spot":type==="jingle"?"kind-jingle":type==="track"?"kind-track":"kind-music";
+    const badge=CATEGORY_LABELS[type]||type;
+    const eta=estimatedQueueTime(i);
+    return '<div class="rundown-row '+(i===0?"is-next":"")+'" data-queue-index="'+i+'">'+
+      '<span class="rundown-position"><b>'+String(i+1).padStart(2,"0")+'</b><small>POS.</small></span>'+
+      '<span class="rundown-eta"><b>'+escapeHtml(eta)+'</b><small>'+(i===0?"PRÓXIMA":"PREVISTA")+'</small></span>'+
+      '<span class="rundown-kind '+kindClass+'">'+escapeHtml(badge.toUpperCase())+'</span>'+
+      '<div class="rundown-item-main"><b title="'+escapeHtml(m.name)+'">'+escapeHtml(m.name)+'</b><small><i></i>'+(i===0?"PRÓXIMA NA SEQUÊNCIA":"NA PROGRAMAÇÃO")+' · '+escapeHtml(badge.toUpperCase())+'</small></div>'+
+      '<b class="rundown-duration">'+fmt(m.duration)+'</b>'+
+      '<div class="row-actions"><button class="icon-button" data-up="'+i+'" title="Mover para cima" '+(i===0?"disabled":"")+' aria-label="Mover para cima">↑</button><button class="icon-button" data-down="'+i+'" title="Mover para baixo" '+(i===queue.length-1?"disabled":"")+' aria-label="Mover para baixo">↓</button><button class="icon-button" data-remove="'+i+'" title="Remover da fila" aria-label="Remover da fila">×</button></div>'+
+      '</div>';
+  }).join("");
 }
 function categorySelect(m){
   return '<select class="type-select" data-type-id="'+m.id+'" aria-label="Categoria de '+escapeHtml(m.name)+'">'+Object.keys(CATEGORY_LABELS).map(t=>'<option value="'+t+'" '+(m.type===t?"selected":"")+'>'+CATEGORY_LABELS[t]+'</option>').join("")+'</select>';
@@ -453,23 +470,26 @@ function drawCarts(){
     const visible=m&&(cartFilter==="all"||m.type===cartFilter);
     const key=i<9?"F"+(i+1):"—";
     if(m&&visible){
-      const category=m.type==="spot"?"COMERCIAL":m.type==="track"?"TRILHA":"VINHETA";
+      const category=m.type==="spot"?"COMERCIAL":m.type==="track"?"TRILHA":m.type==="music"?"MÚSICA":"VINHETA";
       const playing=currentCart&&currentCart.id===m.id;
-      html.push('<article class="cart-pad is-loaded '+(m.type==="spot"?"type-spot":m.type==="track"?"type-track":"type-jingle")+' '+(playing?"is-playing":"")+'" data-slot="'+i+'">'+
-        '<button type="button" class="cart-pad-fire" data-cart-slot-play="'+i+'" aria-label="Disparar '+escapeHtml(m.name)+'">'+
+      const icon=m.type==="spot"?"◉":m.type==="track"?"♫":m.type==="music"?"♪":"✳";
+      html.push('<article class="cart-pad is-loaded '+(m.type==="spot"?"type-spot":m.type==="track"?"type-track":m.type==="music"?"type-music":"type-jingle")+' '+(playing?"is-playing":"")+'" data-slot="'+i+'">'+
+        '<button type="button" class="cart-pad-fire '+(playing?"is-playing":"")+'" data-cart-slot-play="'+i+'" aria-label="'+(playing?"Parar":"Disparar")+' '+escapeHtml(m.name)+'">'+
         '<span class="cart-pad-top"><span class="cart-pad-number">'+String(i+1).padStart(2,"0")+'</span><span class="cart-pad-hotkey">'+key+'</span></span>'+
-        '<span class="cart-pad-icon">'+(m.type==="spot"?"◉":m.type==="track"?"♫":"✳")+'</span>'+
+        '<span class="cart-pad-icon">'+icon+'</span>'+
         '<span class="cart-pad-name" title="'+escapeHtml(m.name)+'">'+escapeHtml(m.name)+'</span>'+
-        '<span class="cart-pad-meta"><span>'+category+'</span><span>'+fmt(m.duration)+'</span></span></button>'+
+        '<span class="cart-pad-meta"><span>'+category+'</span><span>'+fmt(m.duration)+'</span></span>'+
+        '<span class="cart-pad-action">'+(playing?"■ PARAR DISPARO":"▶ DISPARAR")+'</span></button>'+
         '<div class="cart-pad-tools"><button type="button" data-cart-slot-load="'+i+'" title="Trocar áudio deste slot">Trocar</button><button type="button" data-cart-slot-clear="'+i+'" title="Esvaziar slot" aria-label="Esvaziar slot">×</button></div></article>');
     }else if(m){
-      html.push('<article class="cart-pad is-filtered-out '+(m.type==="spot"?"type-spot":m.type==="track"?"type-track":"type-jingle")+'" data-slot="'+i+'"><div class="cart-pad-filtered"><span class="cart-pad-number">'+String(i+1).padStart(2,"0")+'</span><b>'+escapeHtml(m.name)+'</b><small>Filtro: '+escapeHtml(CATEGORY_LABELS[m.type])+'</small></div><div class="cart-pad-tools"><button type="button" data-cart-filter-show="all">Ver todos</button></div></article>');
+      /* Ocultar slots de outras categorias no filtro; não repetir o rótulo/título do mesmo cartucho. */
+      continue;
     }else{
       html.push('<article class="cart-pad is-empty" data-slot="'+i+'"><button type="button" class="cart-pad-empty" data-cart-slot-load="'+i+'"><span class="cart-pad-top"><span class="cart-pad-number">'+String(i+1).padStart(2,"0")+'</span><span class="cart-pad-hotkey">'+key+'</span></span><span class="cart-pad-plus">＋</span><b>Carregar áudio</b><small>'+(cartFilter==="all"?"Vinheta, comercial ou trilha":CATEGORY_LABELS[cartFilter])+'</small></button></article>');
     }
   }
   el.className="cart-grid";
-  el.innerHTML=html.join("");
+  el.innerHTML=html.length?html.join(""):'<div class="cart-filter-empty"><b>Nenhum cartucho nesta categoria</b><small>Importe os arquivos desta categoria. Os cartuchos existentes em outras categorias não são duplicados.</small></div>';
   refreshJingleRotationUI();
 }
 function getRotationJingles(){
@@ -870,13 +890,26 @@ function stopCartPlayback(write=true){
   if(prior&&write)writeLog("cart-stop","Disparo interrompido: "+prior.name,{mediaId:prior.id,title:prior.name,type:prior.type,source:prior.source,result:"interrompido"});
 }
 function playCart(m,source="cartwall"){
-  if(!m)return;if(currentCart)stopCartPlayback(true);else restoreMainVolume();
+  if(!m)return;
+  /* Um segundo clique no mesmo cartucho é stop. Outro cartucho substitui o disparo atual. */
+  if(currentCart&&currentCart.id===m.id){stopCartPlayback(true);return;}
+  if(currentCart)stopCartPlayback(true);else restoreMainVolume();
   currentCart={id:m.id,name:m.name,type:m.type,source};
-  if(!mainAudio.paused&&!mainAudio.ended){mainVolumeBeforeCart=volumePercent("mainVolume",100)/100;mainAudio.volume=Math.min(mainVolumeBeforeCart,0.30);cartDuckApplied=true;$("cartDuckingLabel").textContent="Programa atenuado";}
-  else $("cartDuckingLabel").textContent="Sem programa principal";
-  $("cartNowLabel").textContent=m.name;setCartStatus("DISPARANDO",true);drawCarts();cartAudio.src=m.url;cartAudio.currentTime=0;cartAudio.load();
+  if(!mainAudio.paused&&!mainAudio.ended){
+    mainVolumeBeforeCart=volumePercent("mainVolume",100)/100;
+    mainAudio.volume=Math.min(mainVolumeBeforeCart,0.30);
+    cartDuckApplied=true;
+    $("cartDuckingLabel").textContent="Programa atenuado";
+  }else $("cartDuckingLabel").textContent="Sem programa principal";
+  $("cartNowLabel").textContent=m.name;setCartStatus("DISPARANDO",true);drawCarts();
+  cartAudio.src=m.url;cartAudio.currentTime=0;cartAudio.load();
   writeLog("cart-start","Cartwall: "+m.name,{mediaId:m.id,title:m.name,type:m.type,source,result:"disparo iniciado"});
-  cartAudio.play().catch(err=>{const failed=currentCart;stopCartPlayback(false);if(failed)writeLog("play-error","Falha no disparo: "+failed.name,{mediaId:failed.id,title:failed.name,type:failed.type,source,result:err.name||"erro"});showToast("Não foi possível disparar este áudio. Verifique o arquivo e tente novamente.",true);});
+  cartAudio.play().catch(err=>{
+    const failed=currentCart;
+    stopCartPlayback(false);
+    if(failed)writeLog("play-error","Falha no disparo: "+failed.name,{mediaId:failed.id,title:failed.name,type:failed.type,source,result:err.name||"erro"});
+    showToast("Não foi possível disparar este áudio. Verifique o arquivo e tente novamente.",true);
+  });
 }
 function finishCartPlayback(){const finished=currentCart;currentCart=null;restoreMainVolume();$("cartNowLabel").textContent="Cartwall aguardando disparo";drawCarts();persistState();if(finished)writeLog("cart-complete","Disparo concluído: "+finished.name,{mediaId:finished.id,title:finished.name,type:finished.type,source:finished.source,result:"concluído"});if(auto&&mainAudio.paused&&queue.length)next();}
 function buildRotationBlock(){

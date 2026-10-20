@@ -33,9 +33,11 @@ child.stderr.on("data", chunk => { output += chunk.toString(); });
     const pageResponse = await fetch(base + "/");
     assert.equal(pageResponse.status, 200);
     const page = await pageResponse.text();
-    assert.match(page, /Qolan Studio/);\n    assert.match(page, /Console de estúdio/);\n    assert.match(page, /Cartwall/);
-    assert.match(page, /styles\.css\?v=0\.2\.1/);
-    assert.match(page, /app\.js\?v=0\.2\.1/);
+    assert.match(page, /Qolan Studio/);
+    assert.match(page, /Console de estúdio/);
+    assert.match(page, /Cartwall/);
+    assert.match(page, /styles\.css\?v=0\.3\.0/);
+    assert.match(page, /app\.js\?v=0\.3\.0/);
     assert.match(page, /\.view\s*\{\s*display:\s*none\s*;/);
     assert.match(page, /\.view\.active\s*\{\s*display:\s*block\s*;/);
     for (const feature of ["view-console", "view-library", "view-programming", "view-commercials", "view-logs", "view-diagnostics", "view-settings"]) {
@@ -49,14 +51,17 @@ child.stderr.on("data", chunk => { output += chunk.toString(); });
     const appJs = await appResponse.text();
     assert.match(appJs, /indexedDB\.open/);
     assert.match(appJs, /scheduleTick/);
-    assert.match(appJs, /play-complete/);\n    assert.match(appJs, /classList\\.toggle\\("playing",playing\\)/);
+    assert.match(appJs, /play-complete/);
+    assert.match(appJs, /classList\.toggle\("playing",playing\)/);
 
     const cssResponse = await fetch(base + "/styles.css?v=0.3.0");
     assert.equal(cssResponse.status, 200);
     assert.match(cssResponse.headers.get("content-type") || "", /text\/css/);
     const css = await cssResponse.text();
-    assert.match(css, /\.view\{display:none\}/);
-    assert.match(css, /\.shell\{display:grid;/);
+    assert.match(css, /\.view\s*\{\s*display:\s*none/);
+    assert.match(css, /\.shell\s*\{\s*display:\s*grid/);
+    assert.match(css, /\.state-pill\.playing/);
+    assert.match(css, /\.cart-button/);
     console.log("Smoke tests passed: health/version 0.3.0, broadcast console labels, versioned assets, single active view, playback state styling, seven UI modules, persistent media, local scheduler and logs.");
   } catch (error) {
     console.error(error);

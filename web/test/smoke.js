@@ -28,12 +28,12 @@ child.stderr.on("data", chunk => { output += chunk.toString(); });
     assert.equal(health.ok, true);
     assert.equal(health.service, "qolan-studio-web");
     assert.equal(health.product, "Qolan Studio");
-    assert.equal(health.version, "0.2.1");
+    assert.equal(health.version, "0.3.0");
 
     const pageResponse = await fetch(base + "/");
     assert.equal(pageResponse.status, 200);
     const page = await pageResponse.text();
-    assert.match(page, /Qolan Studio/);
+    assert.match(page, /Qolan Studio/);\n    assert.match(page, /Console de estúdio/);\n    assert.match(page, /Cartwall/);
     assert.match(page, /styles\.css\?v=0\.2\.1/);
     assert.match(page, /app\.js\?v=0\.2\.1/);
     assert.match(page, /\.view\s*\{\s*display:\s*none\s*;/);
@@ -44,20 +44,20 @@ child.stderr.on("data", chunk => { output += chunk.toString(); });
     assert.match(page, /Prova de veiculação/);
     assert.match(page, /não é um motor de transmissão 24\/7/i);
 
-    const appResponse = await fetch(base + "/app.js?v=0.2.1");
+    const appResponse = await fetch(base + "/app.js?v=0.3.0");
     assert.equal(appResponse.status, 200);
     const appJs = await appResponse.text();
     assert.match(appJs, /indexedDB\.open/);
     assert.match(appJs, /scheduleTick/);
-    assert.match(appJs, /play-complete/);
+    assert.match(appJs, /play-complete/);\n    assert.match(appJs, /classList\\.toggle\\("playing",playing\\)/);
 
-    const cssResponse = await fetch(base + "/styles.css?v=0.2.1");
+    const cssResponse = await fetch(base + "/styles.css?v=0.3.0");
     assert.equal(cssResponse.status, 200);
     assert.match(cssResponse.headers.get("content-type") || "", /text\/css/);
     const css = await cssResponse.text();
     assert.match(css, /\.view\{display:none\}/);
     assert.match(css, /\.shell\{display:grid;/);
-    console.log("Smoke tests passed: health/version 0.2.1, versioned assets, single active view, layout CSS, seven UI modules, persistent media, local scheduler and logs.");
+    console.log("Smoke tests passed: health/version 0.3.0, broadcast console labels, versioned assets, single active view, playback state styling, seven UI modules, persistent media, local scheduler and logs.");
   } catch (error) {
     console.error(error);
     console.error(output);

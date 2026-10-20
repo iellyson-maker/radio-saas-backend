@@ -1,9 +1,38 @@
 const express = require("express");
-const path = require("path");
+const path = require("node:path");
+
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = Number(process.env.PORT) || 3000;
+const VERSION = "0.2.0";
+const PUBLIC_DIR = path.join(__dirname, "public");
+
 app.disable("x-powered-by");
-app.use(express.static(path.join(__dirname, "public"), { maxAge: "1h", etag: true }));
-app.get("/health", (_req, res) => res.status(200).json({ ok: true, service: "qolan-studio-web", product: "Qolan Studio", version: "0.1.0", time: new Date().toISOString() }));
-app.get("*", (_req, res) => res.sendFile(path.join(__dirname, "public", "index.html")));
-app.listen(PORT, "0.0.0.0", () => console.log("Qolan Studio Web listening on " + PORT));
+app.use(express.static(PUBLIC_DIR, {
+  maxAge: "1h",
+  etag: true,
+  setHeaders(res, filePath) {
+    if (path.basename(filePath) === "index.html") {
+      res.setHeader("Cache-Control", "no-cache, must-revalidate");
+    }
+  }
+}));
+
+app.get("/health", (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.status(200).json({
+    ok: true,
+    service: "qolan-studio-web",
+    product: "Qolan Studio",
+    version: VERSION,
+    time: new Date().toISOString()
+  });
+});
+
+app.get("*", (_req, res) => {
+  res.set("Cache-Control", "no-cache, must-revalidate");
+  res.sendFile(path.join(PUBLIC_DIR, "index.html"));
+});
+
+app.listen(PORT, "0.0.0.0", () => {
+  console.log("Qolan Studio Web " + VERSION + " listening on " + PORT);
+});

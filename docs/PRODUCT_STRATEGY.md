@@ -162,3 +162,16 @@ A cartucheira recebe 12 identidades de cor persistentes por posição, com fundo
 - Pré-escuta tem atalho permanente na barra superior e ação visível no cabeçalho do programa principal, além da página dedicada e da ação na biblioteca.
 - Cabeçalho mais compacto; relógio digital com bezel premium, algarismos monoespaçados e indicação de origem/fuso.
 - Fila de áudio revisada como rundown de radiodifusão: posição, previsão de execução, tipo de evento, título e duração. Destaque visual para o item seguinte.
+
+
+## Qolan Studio 0.9.0 — Aero Glass Console
+
+A mudança de linguagem visual inspira-se nos princípios divulgados para cockpits digitais modernos de jatos executivos, incluindo o Falcon 10X: telas grandes, organização intuitiva, menor ruído visual e comandos táteis claramente hierarquizados. A implementação é uma identidade visual original do Qolan, sem reproduzir logotipos, instrumentos aeronáuticos ou telas proprietárias.
+
+- Paleta azul-grafite com vidro escuro, contornos metálicos e ciano luminoso para controles primários; verde menta reservado aos estados operacionais e âmbar/vermelho para avisos.
+- Sidebar revisada como painel de sistemas, com navegação agrupada, seleção luminosa e cartões de emissora com contornos suaves.
+- Barra superior e barra de comando com hierarquia de instrumentos, relógio digital maior, fonte monoespaçada e acentos ciano.
+- Botões remodelados como comandos táteis com profundidade, borda de destaque, feedback de pressionamento, foco acessível e estados diferenciados para play, stop, próxima faixa, automação e pré-escuta.
+- Cartuchos tratados como teclas iluminadas de ação direta, preservando sua cor de categoria e realçando o cartucho em disparo.
+- Painéis com efeito glass/digital instrument, bordas e gradientes discretos, medidores de áudio e roteiro de veiculação integrados ao mesmo design system.
+- Escopo visual: a mudança não simula dados de voo nem altera a lógica de reprodução, fila, cartwall, pré-escuta ou roteamento de áudio.

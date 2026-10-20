@@ -903,3 +903,22 @@ input, select {
 @media (max-width:400px) {
   .cart-grid {grid-template-columns:repeat(2,minmax(0,1fr))}
 }
+
+
+/* Functional entry cards in the studio console */
+.module-ready {
+  align-self:center; padding:4px 6px; border:1px solid #315e4a; border-radius:3px;
+  color:#8ae5b6; background:#163025; font-size:7px; font-weight:900; letter-spacing:.6px;
+  white-space:nowrap
+}
+.module-ready-blue {border-color:#31586b; color:#99d7fa; background:#172d39}
+.support-open-button {
+  display:flex; align-items:center; justify-content:space-between; gap:8px; width:100%;
+  padding:10px 12px; border:0; border-top:1px solid #2b4038; color:#a8edc9;
+  background:#15261f; font-size:10px; font-weight:850; text-align:left; cursor:pointer
+}
+.support-open-button span {font-size:15px; transition:transform .12s ease}
+.support-open-button:hover {color:#e0ffed; background:#1c362a}
+.support-open-button:hover span {transform:translateX(3px)}
+.support-open-blue {border-top-color:#2b4050; color:#a9dafa; background:#15232c}
+.support-open-blue:hover {color:#e1f4ff; background:#1c303d}

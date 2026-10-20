@@ -55,6 +55,11 @@ const fmt = sec => {
 };
 const localDateKey = d => core.stationClockParts(d,settings.timezone).dateKey;
 const timeKey = d => core.stationClockParts(d,settings.timezone).timeKey;
+function formatStationDate(value,options={}){
+  const d=value instanceof Date?value:new Date(value);
+  const zone=core.stationClockParts(d,settings.timezone).timeZone;
+  return new Intl.DateTimeFormat("pt-BR",{timeZone:zone==="local"?undefined:zone,...options}).format(d);
+}
 const escapeHtml = value => String(value == null ? "" : value).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const bytesLabel = n => {
   if (!Number.isFinite(Number(n))) return "—";
@@ -221,7 +226,7 @@ function setPlayState(text, playing=false){$("playState").textContent=text;$("pl
 function drawClock(){
   const d=now(),p=core.stationClockParts(d,settings.timezone);
   $("clock").textContent=p.hour+":"+p.minute+":"+p.second;
-  $("dateLabel").textContent=new Intl.DateTimeFormat("pt-BR",{timeZone:p.timeZone==="local"?undefined:p.timeZone,weekday:"short",day:"2-digit",month:"short"}).format(d).toUpperCase();
+  $("dateLabel").textContent=formatStationDate(d,{weekday:"short",day:"2-digit",month:"short"}).toUpperCase();
 }
 function showView(view){
   if(!$("view-"+view))view="console";
@@ -261,7 +266,7 @@ function renderStats(){
 function estimatedQueueTime(index){
   let seconds=0;if(current&&!mainAudio.paused&&!mainAudio.ended)seconds=Math.max(0,(Number(mainAudio.duration)||current.duration||0)-mainAudio.currentTime);
   for(let i=0;i<index;i++)seconds+=Number(queue[i].duration)||0;
-  return new Intl.DateTimeFormat("pt-BR",{timeZone:core.stationClockParts(new Date(),settings.timezone).timeZone==="local"?undefined:settings.timezone,hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(new Date(Date.now()+seconds*1000));
+  return formatStationDate(new Date(Date.now()+seconds*1000),{hour:"2-digit",minute:"2-digit",hourCycle:"h23"});
 }
 function drawQueue(){
   $("queueCount").textContent=queue.length+" itens";$("statQueue").textContent=String(queue.length);
@@ -325,14 +330,14 @@ function renderRecentLogs(){
   const recent=logs.slice(0,7);
   if(!recent.length){el.className="record-list empty-state";el.textContent="Ainda não há eventos registrados.";return;}
   el.className="record-list";
-  el.innerHTML=recent.map(l=>'<div class="record-row"><span class="row-index">'+escapeHtml(l.timestamp?new Date(l.timestamp).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"}):"—")+'</span><div class="record-main"><b>'+escapeHtml(l.message)+'</b><small>'+escapeHtml(labelEvent(l.event))+' · '+escapeHtml(l.title||"")+'</small></div></div>').join("");
+  el.innerHTML=recent.map(l=>'<div class="record-row"><span class="row-index">'+escapeHtml(l.timestamp?formatStationDate(l.timestamp,{hour:"2-digit",minute:"2-digit",hourCycle:"h23"}):"—")+'</span><div class="record-main"><b>'+escapeHtml(l.message)+'</b><small>'+escapeHtml(labelEvent(l.event))+' · '+escapeHtml(l.title||"")+'</small></div></div>').join("");
 }
 function renderLogs(){
   const el=$("logTable");
   $("logCount").textContent=logs.length+" registros";
   if(!logs.length){el.innerHTML='<tr><td colspan="5" class="empty-cell">Nenhum registro.</td></tr>';return;}
   el.innerHTML=logs.slice(0,300).map(l=>{
-    const date=l.timestamp?new Date(l.timestamp).toLocaleString("pt-BR"):"—";
+    const date=l.timestamp?formatStationDate(l.timestamp,{year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hourCycle:"h23"}):"—";
     const duration=Number.isFinite(Number(l.seconds))?fmt(l.seconds):"—";
     const result=l.result||"registrado";
     return '<tr><td>'+escapeHtml(date)+'</td><td>'+escapeHtml(labelEvent(l.event))+'</td><td>'+escapeHtml(l.title||l.message||"—")+'</td><td>'+duration+'</td><td><span class="category-tag">'+escapeHtml(result)+'</span></td></tr>';
@@ -652,7 +657,7 @@ function renderNews(){
   const el=$("newsList");if(!el)return;
   if(!newsItems.length){el.className="news-list empty-state";el.textContent="Nenhuma manchete disponível. Atualize a fonte ou tente novamente.";return;}
   el.className="news-list";el.innerHTML=newsItems.map((item,i)=>{
-    const date=item.publishedAt?new Date(item.publishedAt).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}):"Data não informada";
+    const date=item.publishedAt?formatStationDate(item.publishedAt,{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}):"Data não informada";
     return '<article class="news-story"><div class="news-story-meta"><span class="news-source-tag">'+escapeHtml(item.category||"NOTÍCIA")+'</span><time>'+escapeHtml(date)+'</time></div><a class="news-story-title" href="'+escapeHtml(item.url)+'" target="_blank" rel="noopener noreferrer">'+escapeHtml(item.title)+'</a>'+(item.description?'<p>'+escapeHtml(item.description)+'</p>':'')+'<div class="news-story-actions"><a class="news-open-link" href="'+escapeHtml(item.url)+'" target="_blank" rel="noopener noreferrer">Ler original ↗</a><button type="button" class="btn btn-quiet btn-small" data-news-use="'+i+'">＋ Pauta</button></div></article>';
   }).join("");
 }

@@ -11,7 +11,7 @@
     .view { display: none; }
     .view.active { display: block; }
   </style>
-  <link rel="stylesheet" href="/styles.css?v=0.4.0">
+  <link rel="stylesheet" href="/styles.css?v=0.5.0">
 </head>
 <body>
 <div class="shell">
@@ -27,12 +27,14 @@
       <button class="nav-item" data-view="library"><span class="nav-icon">♫</span> Biblioteca</button>
       <button class="nav-item" data-view="programming"><span class="nav-icon">◷</span> Programação</button>
       <button class="nav-item" data-view="commercials"><span class="nav-icon">▣</span> Comerciais</button>
+      <button class="nav-item" data-view="live"><span class="nav-icon">▤</span> Conteúdo ao vivo</button>
+      <button class="nav-item" data-view="visual"><span class="nav-icon">▧</span> Rádio visual / OBS</button>
       <span class="nav-label">CONTROLE</span>
       <button class="nav-item" data-view="logs"><span class="nav-icon">≡</span> Prova de veiculação</button>
       <button class="nav-item" data-view="diagnostics"><span class="nav-icon">⌁</span> Diagnóstico</button>
       <button class="nav-item" data-view="settings"><span class="nav-icon">⚙</span> Configurações</button>
     </nav>
-    <div class="sidebar-bottom"><div class="version-row"><span>QOLAN WEB</span><b>0.4.0</b></div><p>Versão web de avaliação. Não é um motor de transmissão 24/7.</p></div>
+    <div class="sidebar-bottom"><div class="version-row"><span>QOLAN WEB</span><b>0.5.0</b></div><p>Versão web de avaliação. Não é um motor de transmissão 24/7.</p></div>
   </aside>
 
   <div class="work-area">
@@ -120,8 +122,10 @@
             <section class="panel cart-panel studio-cart-panel">
               <div class="panel-head studio-panel-head">
                 <div class="studio-panel-title"><span class="panel-index panel-index-hot">B1</span><div><span class="eyebrow">DISPARO INSTANTÂNEO</span><h2>Cartwall <span class="heading-secondary">/ cartucheira</span></h2></div></div>
-                <span class="hotkey-hint">ATALHOS <b>F1–F9</b></span>
+                <div class="cart-head-actions"><span id="cartStatus" class="cart-state">SEM DISPARO</span><button id="stopCartBtn" class="btn btn-quiet btn-small" disabled>Parar</button><span class="hotkey-hint">ATALHOS <b>F1–F9</b></span></div>
               </div>
+              <audio id="cartAudio" preload="none"></audio>
+              <div class="cart-live-label"><span class="cart-live-dot"></span><b id="cartNowLabel">Cartwall aguardando disparo</b><small id="cartDuckingLabel">Áudio de apoio</small></div>
               <div class="cart-tabs"><button class="active" data-cart-filter="all">TODOS</button><button data-cart-filter="jingle">VINHETAS</button><button data-cart-filter="spot">COMERCIAIS</button><button data-cart-filter="track">TRILHAS</button></div>
               <div id="cartList" class="cart-grid empty-state">Importe vinhetas, comerciais ou trilhas para montar a cartucheira.</div>
               <p class="panel-note">Nesta versão, o disparo usa o mesmo player principal. Canais independentes estão previstos para a engine local.</p>
@@ -169,6 +173,13 @@
 
       <section class="view" id="view-programming">
         <div class="page-heading"><div><span class="eyebrow">REGRAS LOCAIS</span><h1>Programação</h1><p>Agende execuções por dia e horário nesta instância do navegador.</p></div><span class="state-pill warning-pill">LOCAL • ABA ABERTA</span></div>
+        <section class="panel rotation-builder">
+          <div class="panel-head studio-panel-head"><div class="studio-panel-title"><span class="panel-index">AUTO</span><div><span class="eyebrow">AUTOMAÇÃO MUSICAL</span><h2>Montador de bloco</h2></div></div><span class="rotation-rule">Sem repetir no bloco</span></div>
+          <div class="rotation-controls"><div class="rotation-explanation"><b>Monte uma sequência de músicas em segundos.</b><small>Prioriza faixas fora das últimas 10 execuções e evita itens que já estejam na fila ou no player.</small></div>
+            <label for="rotationCount">Quantidade de faixas<select id="rotationCount"><option value="5">5 faixas</option><option value="8" selected>8 faixas</option><option value="10">10 faixas</option><option value="15">15 faixas</option><option value="20">20 faixas</option></select></label>
+            <button type="button" id="buildRotationBtn" class="btn btn-primary">Montar bloco musical →</button></div>
+          <div id="rotationSummary" class="rotation-summary">Aguardando montagem. Classifique os arquivos como Música na Biblioteca.</div>
+        </section>
         <div class="split-grid">
           <section class="panel form-panel"><div class="panel-head"><div><span class="eyebrow">NOVO EVENTO</span><h2>Agendamento de áudio</h2></div></div>
             <form id="scheduleForm" class="form-grid">
@@ -198,7 +209,34 @@
         </div>
       </section>
 
-      <section class="view" id="view-logs">
+      <section class="view" id="view-live">
+<div class="page-heading live-page-heading"><div><span class="eyebrow">REDAÇÃO • APOIO À LOCUÇÃO</span><h1>Conteúdo ao vivo</h1><p>Manchetes consultáveis durante o programa e pauta rápida local.</p></div><div class="button-row"><span id="newsStatus" class="feed-status">Pronto para atualizar</span><button id="refreshNewsBtn" class="btn btn-primary">↻ Atualizar notícias</button></div></div>
+<div class="live-content-grid">
+<section class="panel news-room"><div class="panel-head studio-panel-head"><div class="studio-panel-title"><span class="panel-index">N1</span><div><span class="eyebrow">FONTES EDITORIAIS</span><h2>Manchetes</h2></div></div><label class="news-source-label">FONTE<select id="newsSourceSelect"><option value="agencia-brasil">Agência Brasil · Últimas</option><option value="radioagencia">Radioagência Nacional</option><option value="politica">Agência Brasil · Política</option><option value="economia">Agência Brasil · Economia</option><option value="esportes">Agência Brasil · Esportes</option></select></label></div>
+<div id="newsList" class="news-list empty-state">Atualize as notícias para carregar as manchetes da fonte selecionada.</div>
+<div class="panel-foot news-foot"><span>Feed RSS oficial • EBC / Agência Brasil</span><a href="https://agenciabrasil.ebc.com.br/feed/" target="_blank" rel="noopener noreferrer">Fontes editoriais ↗</a></div></section>
+<section class="panel notes-room"><div class="panel-head studio-panel-head"><div class="studio-panel-title"><span class="panel-index">N2</span><div><span class="eyebrow">ROTEIRO DO LOCUTOR</span><h2>Pauta rápida</h2></div></div><span class="notes-local-chip">LOCAL</span></div>
+<div class="notes-editor"><div class="notes-instructions">Anote a abertura, chamadas, nomes, entrevistas e informações de serviço. Use “＋ Pauta” nas manchetes para inserir um link.</div>
+<textarea id="liveNotes" rows="15" placeholder="ABERTURA — bom dia, região...&#10;1. Manchete principal&#10;2. Serviço / trânsito&#10;3. Entrevista às 10h15"></textarea>
+<div class="notes-meta"><span id="notesSavedAt">Ainda não salvo</span><span>Não sincronizado</span></div>
+<div class="button-row notes-actions"><button id="copyNotesBtn" class="btn btn-quiet">Copiar pauta</button><button id="clearNotesBtn" class="btn btn-danger">Limpar pauta</button></div></div></section></div>
+<div class="notice studio-notice"><span>i</span><p><b>Uso editorial:</b> as manchetes são fornecidas por fontes externas. Abra a matéria original antes de colocar informações no ar. As notas ficam somente neste navegador.</p></div>
+</section>
+<section class="view" id="view-visual">
+<div class="page-heading"><div><span class="eyebrow">PRODUÇÃO • CENAS E VÍDEO</span><h1>Rádio visual / OBS</h1><p>Gerencie cenas do OBS Studio local usando WebSocket v5.</p></div><span class="studio-station-ref"><span class="station-eq"><i></i><i></i><i></i><i></i></span> BRIDGE LOCAL</span></div>
+<div class="obs-workspace">
+<section class="panel obs-config-panel"><div class="panel-head studio-panel-head"><div class="studio-panel-title"><span class="panel-index">V1</span><div><span class="eyebrow">CONEXÃO LOCAL</span><h2>OBS WebSocket v5</h2></div></div><span id="obsConnectionStatus" class="obs-status disconnected">DESCONECTADO</span></div>
+<div class="obs-config-form"><label>Endereço WebSocket<input id="obsAddress" type="url" value="ws://127.0.0.1:4455" placeholder="ws://127.0.0.1:4455" spellcheck="false" autocomplete="url"></label>
+<label>Senha do OBS <span class="field-optional">opcional se autenticação estiver desativada</span><input id="obsPassword" type="password" placeholder="Senha do servidor WebSocket" autocomplete="current-password"></label>
+<div class="obs-button-row"><button id="obsConnectBtn" class="btn btn-primary">Conectar ao OBS</button><button id="obsDisconnectBtn" class="btn btn-quiet" disabled>Desconectar</button></div>
+<div class="obs-security-note"><b>Segurança:</b> a senha fica só na memória desta página e não é salva. Ative o servidor WebSocket integrado no OBS.</div>
+<div class="obs-setup-link">No OBS: <b>Ferramentas → Configurações do servidor WebSocket</b>. Se o navegador bloquear a conexão local, será necessária a bridge Qolan Engine para Windows.</div></div></section>
+<section class="panel obs-monitor-panel"><div class="panel-head studio-panel-head"><div class="studio-panel-title"><span class="panel-index panel-index-hot">V2</span><div><span class="eyebrow">PROGRAMA VISUAL</span><h2 id="obsSceneTitle">Prévia do estúdio</h2></div></div><span id="obsPreviewState" class="preview-rec">AGUARDANDO OBS</span></div>
+<div class="obs-preview-box"><img id="obsPreviewImage" alt="Prévia da cena atual do OBS" hidden><div id="obsPreviewPlaceholder" class="obs-preview-placeholder"><span class="obs-preview-mark">Q</span><b>QOLAN STUDIO</b><small>Conecte o OBS para carregar a cena do programa.</small><span class="obs-preview-format">16:9 · PRÉVIA LOCAL</span></div></div>
+<div class="obs-scene-toolbar"><span class="eyebrow">CENAS DISPONÍVEIS</span><span id="obsSceneCount" class="subtle">0 cenas</span></div><div id="obsSceneList" class="obs-scene-list empty-state">A lista de cenas aparecerá após conectar.</div></section></div>
+<div class="notice studio-notice"><span>!</span><p><b>Alteração com confirmação:</b> ao selecionar uma cena, o Qolan pedirá confirmação antes de enviá-la ao programa do OBS. A conexão real só será verificada quando o OBS estiver aberto e configurado.</p></div>
+</section>
+<section class="view" id="view-logs">
         <div class="page-heading"><div><span class="eyebrow">AUDITORIA LOCAL</span><h1>Prova de veiculação</h1><p>Registros de início, término, interrupção e falha de reprodução.</p></div><div class="button-row"><button class="btn btn-quiet" id="exportJson">Exportar JSON</button><button class="btn btn-primary" id="exportCsv">Exportar CSV</button></div></div>
         <section class="panel full-panel"><div class="panel-head"><div><span class="eyebrow">HISTÓRICO</span><h2>Execuções registradas</h2></div><span id="logCount" class="subtle">0 registros</span></div><div class="table-wrap"><table class="media-table"><thead><tr><th>DATA / HORA</th><th>EVENTO</th><th>MÍDIA</th><th>DURAÇÃO EXECUTADA</th><th>RESULTADO</th></tr></thead><tbody id="logTable"><tr><td colspan="5" class="empty-cell">Nenhum registro.</td></tr></tbody></table></div><div class="panel-foot"><span>Registro local no navegador</span><button class="text-button" id="clearLogs">Limpar histórico local</button></div></section>
         <div class="notice"><span>!</span><p><b>Não é prova legal de transmissão:</b> os registros são gerados pelo player do navegador, não por uma engine de transmissão autenticada. O registro de veiculação verificável e sincronizado será parte do backend profissional.</p></div>
@@ -231,10 +269,10 @@
         </div>
       </section>
     </main>
-    <footer class="global-footer"><span>QOLAN STUDIO WEB 0.4.0</span><span id="storageFooter">Preparando armazenamento local…</span><span>Console de avaliação · sem transmissão contínua</span></footer>
+    <footer class="global-footer"><span>QOLAN STUDIO WEB 0.5.0</span><span id="storageFooter">Preparando armazenamento local…</span><span>Console de avaliação · sem transmissão contínua</span></footer>
   </div>
 </div>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
-<script src="/app.js?v=0.4.0"></script>
+<script src="/app.js?v=0.5.0"></script>
 </body>
 </html>

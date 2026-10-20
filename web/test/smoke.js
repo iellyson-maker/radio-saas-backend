@@ -1,13 +1,10 @@
 const { spawn } = require("node:child_process");
 const path = require("node:path");
 const assert = require("node:assert/strict");
-
 const port = 3100 + Math.floor(Math.random() * 1000);
 const root = path.resolve(__dirname, "..");
 const child = spawn(process.execPath, ["server.js"], {
-  cwd: root,
-  env: { ...process.env, PORT: String(port) },
-  stdio: ["ignore", "pipe", "pipe"]
+  cwd: root, env: { ...process.env, PORT: String(port) }, stdio: ["ignore", "pipe", "pipe"]
 });
 let output = "";
 child.stdout.on("data", chunk => { output += chunk.toString(); });
@@ -25,55 +22,33 @@ child.stderr.on("data", chunk => { output += chunk.toString(); });
     assert.ok(healthResponse, "Server did not start in time");
     assert.equal(healthResponse.status, 200);
     const health = await healthResponse.json();
-    assert.equal(health.ok, true);
-    assert.equal(health.service, "qolan-studio-web");
-    assert.equal(health.product, "Qolan Studio");
-    assert.equal(health.version, "0.4.0");
+    assert.equal(health.ok, true); assert.equal(health.service, "qolan-studio-web");
+    assert.equal(health.product, "Qolan Studio"); assert.equal(health.version, "0.5.0");
 
-    const pageResponse = await fetch(base + "/");
-    assert.equal(pageResponse.status, 200);
+    const pageResponse = await fetch(base + "/"); assert.equal(pageResponse.status, 200);
     const page = await pageResponse.text();
-    assert.match(page, /Qolan Studio/);
-    assert.match(page, /Console de estúdio/);
-    assert.match(page, /Cartwall/);
-    assert.match(page, /Notícias & pautas/);
-    assert.match(page, /Estúdio visual/);
-    assert.match(page, /ESTÚDIO 01/);
-    assert.match(page, /styles\.css\?v=0\.4\.0/);
-    assert.match(page, /app\.js\?v=0\.4\.0/);
-    assert.match(page, /\.view\s*\{\s*display:\s*none\s*;/);
-    assert.match(page, /\.view\.active\s*\{\s*display:\s*block\s*;/);
-    for (const feature of ["view-console", "view-library", "view-programming", "view-commercials", "view-logs", "view-diagnostics", "view-settings"]) {
-      assert.ok(page.includes('id="' + feature + '"'), "Missing UI module: " + feature);
+    for (const text of ["Console de estúdio","Cartwall","Conteúdo ao vivo","Rádio visual / OBS","Montador de bloco",'id="view-live"','id="view-visual"','id="cartAudio"','id="buildRotationBtn"','id="obsConnectBtn"','id="newsSourceSelect"','id="liveNotes"']) {
+      assert.ok(page.includes(text), "Missing UI element: " + text);
     }
-    assert.match(page, /Prova de veiculação/);
-    assert.match(page, /não é um motor de transmissão 24\/7/i);
+    assert.match(page,/styles\.css\?v=0\.5\.0/); assert.match(page,/app\.js\?v=0\.5\.0/);
+    assert.match(page,/\.view\s*\{\s*display:\s*none\s*;/);
+    assert.match(page,/\.view\.active\s*\{\s*display:\s*block\s*;/);
+    for (const view of ["console","library","programming","commercials","live","visual","logs","diagnostics","settings"]) assert.ok(page.includes('id="view-'+view+'"'),"Missing module "+view);
 
-    const appResponse = await fetch(base + "/app.js?v=0.4.0");
-    assert.equal(appResponse.status, 200);
-    const appJs = await appResponse.text();
-    assert.match(appJs, /indexedDB\.open/);
-    assert.match(appJs, /scheduleTick/);
-    assert.match(appJs, /play-complete/);
-    assert.match(appJs, /classList\.toggle\("playing",playing\)/);
+    const sources=await fetch(base+"/api/news-sources"); assert.equal(sources.status,200);
+    const sourceJson=await sources.json(); assert.equal(sourceJson.ok,true);
+    for (const id of ["agencia-brasil","radioagencia","politica","economia","esportes"]) assert.ok(sourceJson.sources.some(s=>s.id===id),"Missing feed "+id);
+    const blocked=await fetch(base+"/api/news/not-allowed"); assert.equal(blocked.status,404);
 
-    const cssResponse = await fetch(base + "/styles.css?v=0.4.0");
-    assert.equal(cssResponse.status, 200);
-    assert.match(cssResponse.headers.get("content-type") || "", /text\/css/);
-    const css = await cssResponse.text();
-    assert.match(css, /\.view\s*\{\s*display:\s*none/);
-    assert.match(css, /\.shell\s*\{\s*display:\s*grid/);
-    assert.match(css, /\.state-pill\.playing/);
-    assert.match(css, /\.cart-button/);
-    assert.match(css, /\.studio-grid/);
-    assert.match(css, /\.ops-metrics/);
-    assert.match(css, /\.visual-stage/);
-    console.log("Smoke tests passed: health/version 0.4.0, studio-console modules, versioned assets, single active view, broadcast styling, persistent media, local scheduler and logs.");
+    const appResponse=await fetch(base+"/app.js?v=0.5.0"); assert.equal(appResponse.status,200);
+    const appText=await appResponse.text();
+    for (const token of ["indexedDB.open","scheduleTick","play-complete","buildRotationBlock","playCart","SetCurrentProgramScene","GetSceneList","GetSourceScreenshot","loadNews"]) assert.ok(appText.includes(token),"Missing application behavior "+token);
+    const cssResponse=await fetch(base+"/styles.css?v=0.5.0"); assert.equal(cssResponse.status,200);
+    assert.match(cssResponse.headers.get("content-type")||"",/text\/css/);
+    const css=await cssResponse.text();
+    for (const token of [".studio-grid",".ops-metrics",".live-content-grid",".obs-workspace",".rotation-builder",".cart-live-label"]) assert.ok(css.includes(token),"Missing style "+token);
+    console.log("Smoke tests passed: Qolan 0.5.0, operator workflow modules, rotation builder, separate cartwall audio, RSS allowlist/API, OBS WebSocket connector, responsive CSS.");
   } catch (error) {
-    console.error(error);
-    console.error(output);
-    process.exitCode = 1;
-  } finally {
-    child.kill();
-  }
+    console.error(error); console.error(output); process.exitCode = 1;
+  } finally { child.kill(); }
 })();

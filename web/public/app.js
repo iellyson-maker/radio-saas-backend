@@ -2,6 +2,8 @@
 "use strict";
 
 const $ = id => document.getElementById(id);
+const mainAudio = $("audio");
+const cartAudio = $("cartAudio");
 const DB_NAME = "qolan-studio-db";
 const DB_VERSION = 1;
 const APP_KEY = "main";
@@ -30,6 +32,18 @@ let pendingSource = "manual";
 let toastTimer = null;
 let lastSchedulerMinute = "";
 let urlSet = new Set();
+let currentCart = null;
+let cartDuckApplied = false;
+let mainVolumeBeforeCart = 1;
+let newsItems = [];
+let newsLoadedSource = "";
+let newsLoadedAt = 0;
+let obsSocket = null;
+let obsConnected = false;
+let obsScenes = [];
+let obsCurrentScene = "";
+let obsPending = new Map();
+let obsHandshake = null;
 
 const now = () => new Date();
 const uid = () => crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2);
@@ -61,7 +75,11 @@ const labelEvent = event => ({
   "media-import":"Mídia importada",
   "media-classify":"Categoria alterada",
   "media-delete":"Mídia removida",
-  "automation":"Automação local"
+  "automation":"Automação local",
+  "block-generated":"Bloco musical montado",
+  "cart-start":"Disparo de cartwall",
+  "cart-complete":"Disparo concluído",
+  "cart-stop":"Disparo interrompido"
 }[event] || event);
 
 function showToast(message, error=false) {
@@ -207,7 +225,7 @@ function showView(view){
   if(!$("view-"+view))view="console";
   document.querySelectorAll(".view").forEach(el=>el.classList.toggle("active",el.id==="view-"+view));
   document.querySelectorAll(".nav-item").forEach(el=>el.classList.toggle("active",el.dataset.view===view));
-  const names={console:"Console de operação",library:"Biblioteca de mídia",programming:"Programação",commercials:"Campanhas e comerciais",logs:"Prova de veiculação",diagnostics:"Diagnóstico do sistema",settings:"Configurações"};
+  const names={console:"Console de estúdio",library:"Biblioteca de mídia",programming:"Programação e automação",commercials:"Campanhas e comerciais",live:"Conteúdo ao vivo",visual:"Rádio visual / OBS",logs:"Registros de execução",diagnostics:"Diagnóstico do sistema",settings:"Configurações"};
   $("viewTitle").textContent=names[view]||"Qolan Studio";
   if(view==="library")drawLibrary();
   if(view==="programming")drawSchedules();
@@ -215,6 +233,8 @@ function showView(view){
   if(view==="logs")renderLogs();
   if(view==="diagnostics")refreshDiagnostics();
   if(view==="settings")fillSettings();
+  if(view==="live"){initLiveNotes();const source=$("newsSourceSelect").value;if(!newsItems.length||newsLoadedSource!==source||Date.now()-newsLoadedAt>180000)loadNews();}
+  if(view==="visual"){restoreObsAddress();renderObsScenes();}
 }
 function renderStation(){
   $("sidebarStation").textContent=settings.stationName||"Emissora";
@@ -236,13 +256,17 @@ function renderStats(){
   const plays=logs.filter(l=>l.event==="play-complete"&&localDateKey(new Date(l.timestamp))===today).length;
   $("statPlays").textContent=String(plays);
 }
+function estimatedQueueTime(index){
+  let seconds=0;if(current&&!mainAudio.paused&&!mainAudio.ended)seconds=Math.max(0,(Number(mainAudio.duration)||current.duration||0)-mainAudio.currentTime);
+  for(let i=0;i<index;i++)seconds+=Number(queue[i].duration)||0;
+  return new Date(Date.now()+seconds*1000).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
+}
 function drawQueue(){
-  $("queueCount").textContent=queue.length+" itens";
-  $("statQueue").textContent=String(queue.length);
+  $("queueCount").textContent=queue.length+" itens";$("statQueue").textContent=String(queue.length);
   const el=$("queueList");
-  if(!queue.length){el.className="record-list empty-state";el.textContent="Adicione itens pela biblioteca.";return;}
+  if(!queue.length){el.className="record-list empty-state";el.textContent="Fila vazia. Monte um bloco musical ou adicione faixas pela biblioteca.";return;}
   el.className="record-list";
-  el.innerHTML=queue.map((m,i)=>'<div class="record-row"><span class="row-index">'+String(i+1).padStart(2,"0")+'</span><div class="record-main"><b title="'+escapeHtml(m.name)+'">'+escapeHtml(m.name)+'</b><small>'+escapeHtml(CATEGORY_LABELS[m.type]||m.type)+' · '+fmt(m.duration)+'</small></div><div class="row-actions"><button class="icon-button" data-up="'+i+'" title="Mover para cima" '+(i===0?"disabled":"")+' aria-label="Mover para cima">↑</button><button class="icon-button" data-down="'+i+'" title="Mover para baixo" '+(i===queue.length-1?"disabled":"")+' aria-label="Mover para baixo">↓</button><button class="icon-button" data-remove="'+i+'" title="Remover da fila" aria-label="Remover">×</button></div></div>').join("");
+  el.innerHTML=queue.map((m,i)=>'<div class="record-row queue-record"><span class="row-index">'+String(i+1).padStart(2,"0")+'</span><div class="record-main"><b title="'+escapeHtml(m.name)+'">'+escapeHtml(m.name)+'</b><small><span class="queue-time">PREV. '+estimatedQueueTime(i)+'</span> · '+escapeHtml(CATEGORY_LABELS[m.type]||m.type)+' · '+fmt(m.duration)+'</small></div><div class="row-actions"><button class="icon-button" data-up="'+i+'" title="Mover para cima" '+(i===0?"disabled":"")+' aria-label="Mover para cima">↑</button><button class="icon-button" data-down="'+i+'" title="Mover para baixo" '+(i===queue.length-1?"disabled":"")+' aria-label="Mover para baixo">↓</button><button class="icon-button" data-remove="'+i+'" title="Remover da fila" aria-label="Remover">×</button></div></div>').join("");
 }
 function categorySelect(m){
   return '<select class="type-select" data-type-id="'+m.id+'" aria-label="Categoria de '+escapeHtml(m.name)+'">'+Object.keys(CATEGORY_LABELS).map(t=>'<option value="'+t+'" '+(m.type===t?"selected":"")+'>'+CATEGORY_LABELS[t]+'</option>').join("")+'</select>';
@@ -589,12 +613,124 @@ async function deleteAllMedia(){
   writeLog("system","Biblioteca local removida",{result:"ação manual"});
   showToast("Biblioteca local removida.");
 }
+
+function setCartStatus(text,active=false){
+  const el=$("cartStatus");if(el){el.textContent=text;el.classList.toggle("active",active);}
+  if($("stopCartBtn"))$("stopCartBtn").disabled=!active;
+}
+function restoreMainVolume(){
+  if(cartDuckApplied){mainAudio.volume=mainVolumeBeforeCart;cartDuckApplied=false;}
+  setCartStatus("SEM DISPARO",false);
+  if($("cartDuckingLabel"))$("cartDuckingLabel").textContent="Áudio de apoio";
+}
+function stopCartPlayback(write=true){
+  const prior=currentCart;cartAudio.pause();try{cartAudio.currentTime=0;}catch(_){}
+  currentCart=null;restoreMainVolume();$("cartNowLabel").textContent="Cartwall aguardando disparo";
+  if(prior&&write)writeLog("cart-stop","Disparo interrompido: "+prior.name,{mediaId:prior.id,title:prior.name,type:prior.type,source:prior.source,result:"interrompido"});
+}
+function playCart(m,source="cartwall"){
+  if(!m)return;if(currentCart)stopCartPlayback(true);else restoreMainVolume();
+  currentCart={id:m.id,name:m.name,type:m.type,source};
+  if(!mainAudio.paused&&!mainAudio.ended){mainVolumeBeforeCart=mainAudio.volume;mainAudio.volume=Math.min(mainVolumeBeforeCart,0.30);cartDuckApplied=true;$("cartDuckingLabel").textContent="Programa atenuado";}
+  else $("cartDuckingLabel").textContent="Sem programa principal";
+  $("cartNowLabel").textContent=m.name;setCartStatus("DISPARANDO",true);cartAudio.src=m.url;cartAudio.currentTime=0;cartAudio.load();
+  writeLog("cart-start","Cartwall: "+m.name,{mediaId:m.id,title:m.name,type:m.type,source,result:"disparo iniciado"});
+  cartAudio.play().catch(err=>{const failed=currentCart;stopCartPlayback(false);if(failed)writeLog("play-error","Falha no disparo: "+failed.name,{mediaId:failed.id,title:failed.name,type:failed.type,source,result:err.name||"erro"});showToast("Não foi possível disparar este áudio. Verifique o arquivo e tente novamente.",true);});
+}
+function finishCartPlayback(){const finished=currentCart;currentCart=null;restoreMainVolume();$("cartNowLabel").textContent="Cartwall aguardando disparo";if(finished)writeLog("cart-complete","Disparo concluído: "+finished.name,{mediaId:finished.id,title:finished.name,type:finished.type,source:finished.source,result:"concluído"});}
+function buildRotationBlock(){
+  const count=Math.max(1,Math.min(20,Number($("rotationCount").value)||8));
+  const blocked=new Set(queue.map(m=>m.id));if(current)blocked.add(current.id);
+  const music=media.filter(m=>m.type==="music"&&!blocked.has(m.id));
+  const recent=new Set(logs.filter(l=>l.event==="play-complete"&&l.mediaId).slice(0,10).map(l=>l.mediaId));
+  let pool=music.filter(m=>!recent.has(m.id));if(pool.length<count)pool=music.slice();
+  for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
+  const selected=pool.slice(0,count);
+  if(!selected.length){$("rotationSummary").textContent="Não há músicas disponíveis. Importe e classifique arquivos como Música.";showToast("Não há músicas disponíveis para montar o bloco.",true);return;}
+  queue.push(...selected);drawQueue();renderStats();persistState();
+  $("rotationSummary").textContent=selected.length+" faixas adicionadas. "+(selected.length<count?"Foram usadas todas as faixas disponíveis.":"Ordem aleatória, sem repetição dentro do bloco.");
+  writeLog("block-generated","Bloco musical montado: "+selected.length+" faixas",{source:"gerador local",title:selected.map(m=>m.name).join(" | "),result:"adicionado à fila"});showToast("Bloco criado com "+selected.length+" faixas.");
+}
+function setNewsStatus(message,mode="idle"){const el=$("newsStatus");if(el){el.textContent=message;el.className="feed-status "+mode;}}
+function renderNews(){
+  const el=$("newsList");if(!el)return;
+  if(!newsItems.length){el.className="news-list empty-state";el.textContent="Nenhuma manchete disponível. Atualize a fonte ou tente novamente.";return;}
+  el.className="news-list";el.innerHTML=newsItems.map((item,i)=>{
+    const date=item.publishedAt?new Date(item.publishedAt).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}):"Data não informada";
+    return '<article class="news-story"><div class="news-story-meta"><span class="news-source-tag">'+escapeHtml(item.category||"NOTÍCIA")+'</span><time>'+escapeHtml(date)+'</time></div><a class="news-story-title" href="'+escapeHtml(item.url)+'" target="_blank" rel="noopener noreferrer">'+escapeHtml(item.title)+'</a>'+(item.description?'<p>'+escapeHtml(item.description)+'</p>':'')+'<div class="news-story-actions"><a class="news-open-link" href="'+escapeHtml(item.url)+'" target="_blank" rel="noopener noreferrer">Ler original ↗</a><button type="button" class="btn btn-quiet btn-small" data-news-use="'+i+'">＋ Pauta</button></div></article>';
+  }).join("");
+}
+async function loadNews(){
+  const source=$("newsSourceSelect").value;setNewsStatus("CONSULTANDO…","loading");$("refreshNewsBtn").disabled=true;
+  try{const r=await fetch("/api/news/"+encodeURIComponent(source),{cache:"no-store"});const d=await r.json();if(!r.ok||!d.ok)throw new Error(d.message||"Fonte indisponível");newsItems=d.items||[];newsLoadedSource=source;newsLoadedAt=Date.now();renderNews();setNewsStatus(newsItems.length+" manchetes · "+new Date(d.updatedAt||Date.now()).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"}),"success");}
+  catch(e){newsItems=[];renderNews();setNewsStatus("FALHA NA FONTE","error");$("newsList").insertAdjacentHTML("afterbegin",'<div class="news-error">'+escapeHtml(e.message||"Tente novamente")+'</div>');}
+  finally{$("refreshNewsBtn").disabled=false;}
+}
+function initLiveNotes(){try{$("liveNotes").value=localStorage.getItem("qolan-live-notes")||"";}catch(_){}updateNotesSavedLabel();}
+function updateNotesSavedLabel(){$("notesSavedAt").textContent=$("liveNotes").value?"Rascunho salvo localmente às "+new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"}):"Pauta vazia";}
+function saveLiveNotes(){try{localStorage.setItem("qolan-live-notes",$("liveNotes").value);updateNotesSavedLabel();}catch(_){$("notesSavedAt").textContent="Armazenamento local indisponível";}}
+function addNewsToNotes(index){const item=newsItems[Number(index)];if(!item)return;const el=$("liveNotes");el.value=(el.value.trim()?el.value.trim()+"\n\n":"")+"• "+item.title+"\n"+item.url+"\n";saveLiveNotes();el.focus();showToast("Manchete adicionada à pauta local.");}
+async function copyLiveNotes(){const value=$("liveNotes").value;if(!value.trim()){showToast("A pauta está vazia.",true);return;}try{await navigator.clipboard.writeText(value);showToast("Pauta copiada.");}catch(_){$("liveNotes").focus();$("liveNotes").select();const ok=document.execCommand("copy");showToast(ok?"Pauta copiada.":"Não foi possível copiar.",!ok);}}
+function setObsStatus(message,mode="disconnected"){const el=$("obsConnectionStatus");if(el){el.textContent=message;el.className="obs-status "+mode;}if($("obsConnectBtn"))$("obsConnectBtn").disabled=mode==="connecting"||mode==="connected";if($("obsDisconnectBtn"))$("obsDisconnectBtn").disabled=mode!=="connected";}
+function restoreObsAddress(){try{$("obsAddress").value=localStorage.getItem("qolan-obs-address")||"ws://127.0.0.1:4455";}catch(_){}}
+function obsBase64(buffer){let x="";for(const v of new Uint8Array(buffer))x+=String.fromCharCode(v);return btoa(x);}
+async function obsHash(value){if(!crypto.subtle)throw new Error("Web Crypto indisponível");return obsBase64(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(value)));}
+function obsRequest(type,data={}){
+  if(!obsSocket||obsSocket.readyState!==WebSocket.OPEN||!obsConnected)return Promise.reject(new Error("OBS não conectado."));
+  const id=uid();return new Promise((resolve,reject)=>{
+    const timer=setTimeout(()=>{obsPending.delete(id);reject(new Error("Tempo esgotado na solicitação "+type));},6500);obsPending.set(id,{resolve,reject,timer});
+    try{obsSocket.send(JSON.stringify({op:6,d:{requestType:type,requestId:id,requestData:data}}));}catch(e){clearTimeout(timer);obsPending.delete(id);reject(e);}
+  });
+}
+function renderObsScenes(){
+  const el=$("obsSceneList");if(!el)return;$("obsSceneCount").textContent=obsScenes.length+" cenas";$("obsSceneTitle").textContent=obsCurrentScene||"Prévia do estúdio";
+  if(!obsScenes.length){el.className="obs-scene-list empty-state";el.textContent=obsConnected?"Nenhuma cena retornada.":"A lista de cenas aparecerá após conectar.";return;}
+  el.className="obs-scene-list";el.innerHTML=obsScenes.map(s=>'<button type="button" class="obs-scene-button '+(s.sceneName===obsCurrentScene?"active":"")+'" data-obs-scene="'+escapeHtml(s.sceneName)+'"><span class="obs-scene-led"></span><b>'+escapeHtml(s.sceneName)+'</b><small>'+(s.sceneName===obsCurrentScene?"NO PROGRAMA":"DEFINIR NO AR")+'</small></button>').join("");
+}
+async function refreshObsPreview(){if(!obsConnected||!obsCurrentScene)return;try{
+  const d=await obsRequest("GetSourceScreenshot",{sourceName:obsCurrentScene,imageFormat:"jpg",imageWidth:800,imageHeight:450,imageCompressionQuality:70});let src=d.imageData||"";
+  if(src&&!src.startsWith("data:"))src="data:image/jpeg;base64,"+src;if(!src)throw new Error("OBS não retornou imagem");
+  $("obsPreviewImage").src=src;$("obsPreviewImage").hidden=false;$("obsPreviewPlaceholder").hidden=true;$("obsPreviewState").textContent="PRÉVIA LOCAL";
+ }catch(e){$("obsPreviewImage").hidden=true;$("obsPreviewPlaceholder").hidden=false;$("obsPreviewPlaceholder").querySelector("small").textContent="Prévia indisponível: "+(e.message||"erro");$("obsPreviewState").textContent="PRÉVIA INDISPONÍVEL";}}
+async function setObsProgramScene(name){if(!obsConnected)return;if(!confirm("Enviar a cena “"+name+"” para o programa do OBS? A alteração pode ir ao ar."))return;try{await obsRequest("SetCurrentProgramScene",{sceneName:name});obsCurrentScene=name;renderObsScenes();await refreshObsPreview();showToast("Cena enviada ao programa: "+name);}catch(e){showToast("Não foi possível alterar a cena: "+e.message,true);}}
+async function obsMessage(m,socket){
+  if(socket!==obsSocket||typeof m.op!=="number")return;
+  if(m.op===0){const d=m.d||{},identify={rpcVersion:d.rpcVersion,eventSubscriptions:4};try{if(d.authentication)identify.authentication=await obsHash(await obsHash($("obsPassword").value+d.authentication.salt)+d.authentication.challenge);socket.send(JSON.stringify({op:1,d:identify}));}catch(e){if(obsHandshake){clearTimeout(obsHandshake.timer);obsHandshake.reject(e);obsHandshake=null;}}}
+  else if(m.op===2){obsConnected=true;if(obsHandshake){clearTimeout(obsHandshake.timer);obsHandshake.resolve();obsHandshake=null;}setObsStatus("CONECTADO","connected");}
+  else if(m.op===7){const d=m.d||{},p=obsPending.get(d.requestId);if(!p)return;clearTimeout(p.timer);obsPending.delete(d.requestId);if(d.requestStatus&&d.requestStatus.result)p.resolve(d.responseData||{});else p.reject(new Error(d.requestStatus&&d.requestStatus.comment||"OBS rejeitou a solicitação."));}
+  else if(m.op===5&&m.d&&m.d.eventType==="CurrentProgramSceneChanged"){obsCurrentScene=m.d.eventData.sceneName||obsCurrentScene;renderObsScenes();refreshObsPreview();}
+}
+async function connectObs(){
+  if(obsSocket)disconnectObs(false);const address=$("obsAddress").value.trim();if(!/^wss?:\/\//i.test(address)){showToast("Endereço WebSocket inválido.",true);return;}
+  try{const u=new URL(address);if(!["ws:","wss:"].includes(u.protocol)||!u.hostname)throw new Error("Endereço inválido");localStorage.setItem("qolan-obs-address",address);}catch(e){showToast(e.message,true);return;}
+  setObsStatus("CONECTANDO…","connecting");
+  try{await new Promise((resolve,reject)=>{let ws;try{ws=new WebSocket(address);}catch(e){reject(e);return;}obsSocket=ws;obsConnected=false;
+    const timer=setTimeout(()=>{if(obsHandshake){clearTimeout(obsHandshake.timer);obsHandshake.reject(new Error("Tempo esgotado. Confira OBS, endereço, porta e senha."));obsHandshake=null;}try{ws.close();}catch(_){}},9000);
+    obsHandshake={resolve,reject,timer};ws.onmessage=e=>{try{obsMessage(JSON.parse(e.data),ws);}catch(err){if(obsHandshake){clearTimeout(obsHandshake.timer);obsHandshake.reject(err);obsHandshake=null;}}};
+    ws.onerror=()=>{setObsStatus("FALHA NA CONEXÃO","error");if(obsHandshake){clearTimeout(obsHandshake.timer);obsHandshake.reject(new Error("Conexão recusada. Confira se o servidor WebSocket está ativado no OBS."));obsHandshake=null;}};
+    ws.onclose=()=>{if(obsSocket===ws){obsSocket=null;obsConnected=false;setObsStatus("DESCONECTADO","disconnected");}};
+  });
+  const result=await obsRequest("GetSceneList");obsScenes=Array.isArray(result.scenes)?result.scenes:[];obsCurrentScene=result.currentProgramSceneName||"";renderObsScenes();await refreshObsPreview();showToast("OBS conectado: "+obsScenes.length+" cenas.");
+  }catch(e){setObsStatus("FALHA NA CONEXÃO","error");showToast("OBS não conectado: "+(e.message||"erro"),true);}
+}
+function disconnectObs(show=true){
+  const ws=obsSocket;obsSocket=null;obsConnected=false;if(obsHandshake){clearTimeout(obsHandshake.timer);obsHandshake.reject(new Error("Desconectado pelo operador."));obsHandshake=null;}
+  for(const [id,p] of obsPending){clearTimeout(p.timer);p.reject(new Error("Conexão encerrada."));obsPending.delete(id);}if(ws&&ws.readyState<WebSocket.CLOSING)ws.close();
+  obsScenes=[];obsCurrentScene="";renderObsScenes();$("obsPreviewImage").hidden=true;$("obsPreviewPlaceholder").hidden=false;$("obsPreviewPlaceholder").querySelector("small").textContent="Conecte o OBS para carregar a cena do programa.";$("obsPreviewState").textContent="AGUARDANDO OBS";setObsStatus("DESCONECTADO","disconnected");if(show)showToast("OBS desconectado.");
+}
+
 function bindEvents(){
   document.querySelectorAll(".nav-item").forEach(b=>b.addEventListener("click",()=>showView(b.dataset.view)));
+  $("buildRotationBtn").addEventListener("click",buildRotationBlock);
+  $("refreshNewsBtn").addEventListener("click",loadNews);$("newsSourceSelect").addEventListener("change",loadNews);
+  $("liveNotes").addEventListener("input",saveLiveNotes);$("copyNotesBtn").addEventListener("click",copyLiveNotes);
+  $("clearNotesBtn").addEventListener("click",()=>{if(confirm("Limpar a pauta local?")){$("liveNotes").value="";saveLiveNotes();showToast("Pauta limpa.");}});
+  $("obsConnectBtn").addEventListener("click",connectObs);$("obsDisconnectBtn").addEventListener("click",()=>disconnectObs(true));$("stopCartBtn").addEventListener("click",()=>stopCartPlayback(true));
   document.addEventListener("click",e=>{
     const goto=e.target.closest("[data-go]");if(goto)showView(goto.dataset.go);
-    const playBtn=e.target.closest("[data-media-play],[data-cart-play]");
-    if(playBtn){const id=playBtn.dataset.mediaPlay||playBtn.dataset.cartPlay;const m=findMedia(id);if(m)play(m,playBtn.dataset.cartPlay?"cartucheira":"biblioteca");}
+    const newsUse=e.target.closest("[data-news-use]");if(newsUse){addNewsToNotes(newsUse.dataset.newsUse);return;}
+    const obsScene=e.target.closest("[data-obs-scene]");if(obsScene){setObsProgramScene(obsScene.dataset.obsScene);return;}
+    const playBtn=e.target.closest("[data-media-play],[data-cart-play]");if(playBtn){const id=playBtn.dataset.mediaPlay||playBtn.dataset.cartPlay;const m=findMedia(id);if(m){if(playBtn.dataset.cartPlay)playCart(m,"cartwall");else play(m,"biblioteca");}}
     const queued=e.target.closest("[data-media-queue]");
     if(queued)addQueue(findMedia(queued.dataset.mediaQueue));
     const remove=e.target.closest("[data-remove]");
@@ -628,6 +764,8 @@ function bindEvents(){
     const sel=e.target.closest("[data-type-id]");if(sel)updateMediaType(sel.dataset.typeId,sel.value);
   });
   $("playBtn").addEventListener("click",togglePlay);
+  cartAudio.addEventListener("ended",finishCartPlayback);
+  cartAudio.addEventListener("error",()=>{if(currentCart){const c=currentCart;stopCartPlayback(false);writeLog("play-error","Falha no disparo: "+c.name,{mediaId:c.id,title:c.name,type:c.type,source:c.source,result:"erro"});}});
   $("stopBtn").addEventListener("click",()=>stopPlayback("Reprodução parada."));
   $("nextBtn").addEventListener("click",next);
   $("prevBtn").addEventListener("click",()=>{if(current){audio.currentTime=0;if(audio.paused)togglePlay();}});
@@ -679,7 +817,7 @@ function bindEvents(){
     if(/^F[1-9]$/.test(e.key)){
       e.preventDefault();const index=Number(e.key.slice(1))-1;
       const carts=media.filter(m=>(cartFilter==="all"||m.type===cartFilter)&&["jingle","spot","track"].includes(m.type)).sort((a,b)=>a.name.localeCompare(b.name,"pt-BR"));
-      if(carts[index])play(carts[index],"cartucheira "+e.key);
+      if(carts[index])playCart(carts[index],"cartwall "+e.key);
     }
   });
   audio.addEventListener("play",()=>{if(!activeSession)startSession(pendingSource);setPlayState("REPRODUZINDO",true);$("playBtn").textContent="Ⅱ";setStatus("REPRODUZINDO");initializeMeter();});
@@ -701,7 +839,7 @@ function bindEvents(){
   });
 }
 async function init(){
-  bindEvents();
+  bindEvents();restoreObsAddress();initLiveNotes();setObsStatus("DESCONECTADO","disconnected");
   drawClock();setInterval(drawClock,1000);
   setInterval(scheduleTick,1000);
   refreshMode();
@@ -720,7 +858,7 @@ async function init(){
   writeLog("system","Console Qolan Studio iniciado",{result:"pronto"});
 }
 window.addEventListener("beforeunload",()=>{
-  clearInterval(meterTimer);clearInterval(fadeTimer);
+  clearInterval(meterTimer);clearInterval(fadeTimer);try{cartAudio.pause();}catch(_){}try{if(obsSocket)disconnectObs(false);}catch(_){}
   for(const url of urlSet)URL.revokeObjectURL(url);
 });
 init();

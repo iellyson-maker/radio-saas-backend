@@ -1,8 +1,8 @@
 {
   "name": "qolan-studio-web",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "private": true,
-  "description": "Qolan Studio — console de estúdio para operação diária de rádio, biblioteca de áudio e programação local",
+  "description": "Qolan Studio — console de operação de rádio com automação musical, cartwall, RSS e conector OBS local",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

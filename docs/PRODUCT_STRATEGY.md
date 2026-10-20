@@ -23,7 +23,7 @@ A página web jamais deve ser descrita como um transmissor 24/7. Fechar ou suspe
 
 ## Escopo por fases
 
-### Fase A — Console web confiável (0.2.x)
+### Fase A — Console web confiável (0.2.x–0.5.x)
 
 - [x] Navegação por módulos: console, biblioteca, programação, comerciais, logs, diagnóstico e configurações.
 - [x] Armazenamento de mídia local via IndexedDB.
@@ -33,6 +33,10 @@ A página web jamais deve ser descrita como um transmissor 24/7. Fechar ou suspe
 - [x] Cadastro de campanha local com mídia comercial, janela de datas, dia e horário.
 - [x] Registro local de inícios, conclusões, interrupções e erros; exportação JSON/CSV.
 - [x] CI e testes HTTP de fumaça.
+- [x] Montador local de bloco musical sem duplicatas no bloco, com exclusão da faixa atual e da fila existente (0.5.0).
+- [x] Cartwall com elemento de áudio separado, atenuação do player principal e logs locais de disparo (0.5.0).
+- [x] Conteúdo ao vivo com feeds RSS fixos e permitidos, cache curto e pauta local do locutor (0.5.0).
+- [x] Conector inicial OBS WebSocket v5 para listar/alterar cenas com confirmação e solicitar prévia, sujeito a validação com OBS real e restrições do navegador.
 - [ ] Testes de navegador reais (Chromium/Firefox), testes com arquivos de áudio reais e validação responsiva.
 - [ ] Recuperação de falha e política formal de retenção/backup para biblioteca local.
 - [ ] Melhorias de acessibilidade e revisão de segurança independente.
@@ -94,6 +98,10 @@ A página web jamais deve ser descrita como um transmissor 24/7. Fechar ou suspe
 6. **Open integrations:** APIs documentadas e bridges isoladas para metadata, encoder e vídeo, respeitando autenticação.
 7. **Instalação e atualização segura:** assinaturas, migrações, rollback e atualização automática testada.
 8. **Produto adaptável:** configuração por estação, layouts operacionais, acessibilidade e atalhos configuráveis.
+
+## Estado da versão 0.5.0
+
+A área Conteúdo ao vivo consome feeds RSS permitidos da Agência Brasil e oferece pauta persistida apenas no navegador. A cartwall usa um elemento de áudio separado e reduz temporariamente o volume do player principal, mas ainda não é um mixer com saídas profissionais. O montador musical evita repetições dentro do bloco e faixas já presentes na fila. O conector OBS usa WebSocket v5 e precisa ser testado com a instalação local do OBS; em alguns navegadores/contextos será necessária a bridge do Qolan Engine.
 
 ## Estado em produção
 

@@ -6,7 +6,12 @@
   <meta name="theme-color" content="#0b1115">
   <meta name="description" content="Qolan Studio — console de operação de rádio com biblioteca, playlists, programação e relatórios locais.">
   <title>Qolan Studio | Console de Rádio</title>
-  <link rel="stylesheet" href="/styles.css">
+  <style>
+    /* Regra crítica de segurança visual: uma tela por vez, mesmo se o CSS externo falhar. */
+    .view { display: none; }
+    .view.active { display: block; }
+  </style>
+  <link rel="stylesheet" href="/styles.css?v=0.2.1">
 </head>
 <body>
 <div class="shell">
@@ -27,7 +32,7 @@
       <button class="nav-item" data-view="diagnostics"><span class="nav-icon">⌁</span> Diagnóstico</button>
       <button class="nav-item" data-view="settings"><span class="nav-icon">⚙</span> Configurações</button>
     </nav>
-    <div class="sidebar-bottom"><div class="version-row"><span>QOLAN WEB</span><b>0.2.0</b></div><p>Versão web de avaliação. Não é um motor de transmissão 24/7.</p></div>
+    <div class="sidebar-bottom"><div class="version-row"><span>QOLAN WEB</span><b>0.2.1</b></div><p>Versão web de avaliação. Não é um motor de transmissão 24/7.</p></div>
   </aside>
 
   <div class="work-area">
@@ -155,10 +160,10 @@
         </div>
       </section>
     </main>
-    <footer class="global-footer"><span>QOLAN STUDIO WEB 0.2.0</span><span id="storageFooter">Preparando armazenamento local…</span><span>Console de avaliação · sem transmissão contínua</span></footer>
+    <footer class="global-footer"><span>QOLAN STUDIO WEB 0.2.1</span><span id="storageFooter">Preparando armazenamento local…</span><span>Console de avaliação · sem transmissão contínua</span></footer>
   </div>
 </div>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
-<script src="/app.js"></script>
+<script src="/app.js?v=0.2.1"></script>
 </body>
 </html>

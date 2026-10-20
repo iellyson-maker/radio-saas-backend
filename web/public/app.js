@@ -197,6 +197,7 @@ function finishSession(result) {
 }
 function findMedia(id){return media.find(m=>m.id===id);}
 function setStatus(text){$("status").textContent=text;}
+function setPlayState(text, playing=false){$("playState").textContent=text;$("playState").classList.toggle("playing",playing);}
 function drawClock(){
   const d=now();
   $("clock").textContent=d.toLocaleTimeString("pt-BR",{hour12:false});
@@ -339,15 +340,15 @@ function play(m,source="manual"){
   audio.src=m.url;
   audio.load();
   renderCurrent();
-  $("playState").textContent="CARREGANDO";
+  setPlayState("CARREGANDO");
   $("playBtn").textContent="Ⅱ";
   setStatus("CARREGANDO ÁUDIO");
   audio.play().then(()=>{
-    $("playState").textContent="REPRODUZINDO";
+    setPlayState("REPRODUZINDO",true);
     setStatus("REPRODUZINDO");
     initializeMeter();
   }).catch(err=>{
-    $("playState").textContent="ERRO";
+    setPlayState("ERRO");
     $("playBtn").textContent="▶";
     setStatus("ERRO DE ÁUDIO");
     writeLog("play-error","Falha ao reproduzir "+m.name,{mediaId:m.id,title:m.name,type:m.type,source,result:err.name||"erro"});
@@ -376,7 +377,7 @@ function stopPlayback(reason="Parada manual."){
   audio.currentTime=0;
   audio.volume=1;
   $("playBtn").textContent="▶";
-  $("playState").textContent="PARADO";
+  setPlayState("PARADO");
   setStatus("SISTEMA PRONTO");
   $("audioContextState").textContent=audioContext?"MOTOR DE ANÁLISE ATIVO":"ÁUDIO AGUARDANDO";
   showToast(reason);
@@ -388,9 +389,9 @@ function togglePlay(){
     showToast("Importe um arquivo de áudio primeiro.",true);return;
   }
   if(audio.paused){
-    audio.play().then(()=>{$("playBtn").textContent="Ⅱ";$("playState").textContent="REPRODUZINDO";setStatus("REPRODUZINDO");}).catch(()=>showToast("O navegador bloqueou a reprodução. Clique novamente.",true));
+    audio.play().then(()=>{$("playBtn").textContent="Ⅱ";setPlayState("REPRODUZINDO",true);setStatus("REPRODUZINDO");}).catch(()=>showToast("O navegador bloqueou a reprodução. Clique novamente.",true));
   }else{
-    audio.pause();$("playBtn").textContent="▶";$("playState").textContent="PAUSADO";setStatus("PAUSADO");
+    audio.pause();$("playBtn").textContent="▶";setPlayState("PAUSADO");setStatus("PAUSADO");
   }
 }
 function fadeNext(){
@@ -681,20 +682,21 @@ function bindEvents(){
       if(carts[index])play(carts[index],"cartucheira "+e.key);
     }
   });
-  audio.addEventListener("play",()=>{if(!activeSession)startSession(pendingSource);$("playState").textContent="REPRODUZINDO";$("playBtn").textContent="Ⅱ";setStatus("REPRODUZINDO");initializeMeter();});
-  audio.addEventListener("pause",()=>{if(audio.ended)return;if(!audio.currentSrc)return;if($("playState").textContent==="REPRODUZINDO")$("playState").textContent="PAUSADO";});
+  audio.addEventListener("play",()=>{if(!activeSession)startSession(pendingSource);setPlayState("REPRODUZINDO",true);$("playBtn").textContent="Ⅱ";setStatus("REPRODUZINDO");initializeMeter();});
+  audio.addEventListener("pause",()=>{if(audio.ended)return;if(!audio.currentSrc)return;if($("playState").textContent==="REPRODUZINDO")setPlayState("PAUSADO");});
   audio.addEventListener("ended",()=>{
+    $("playState").classList.remove("playing");
     finishSession("concluída");$("playBtn").textContent="▶";
     if(queue.length&&(auto||segue))next();
     else if(auto)next();
-    else{$("playState").textContent="FIM DA FAIXA";setStatus("SISTEMA PRONTO");}
+    else{setPlayState("FIM DA FAIXA");setStatus("SISTEMA PRONTO");}
   });
   audio.addEventListener("timeupdate",updateProgress);
   audio.addEventListener("error",()=>{
     if(!current)return;
     if(activeSession)finishSession("erro");
     else writeLog("play-error","Erro ao carregar: "+current.name,{mediaId:current.id,title:current.name,result:"erro"});
-    $("playState").textContent="ERRO";setStatus("ERRO DE ÁUDIO");
+    setPlayState("ERRO");setStatus("ERRO DE ÁUDIO");
     if(queue.length&&auto)next();
   });
 }

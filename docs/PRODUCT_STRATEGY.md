@@ -129,3 +129,10 @@ A versão web atual é um MVP local-first servido pelo Render. IndexedDB armazen
 - Migrações e backups testados antes de alterar dados persistentes.
 - CI passa no commit exato que será implantado; health check e versão/commit confirmados no Render.
 - Notas da versão declaram o que entrou, o que não entrou e limitações conhecidas.
+
+
+## Qolan Studio Web 0.6.0 — cartwall de operação
+
+A cartwall foi reformulada como cartucheira fixa de 12 slots, com estado de slot, categoria, duração, substituição e remoção sem apagar o arquivo da biblioteca. A importação direta por categoria (vinhetas, comerciais, trilhas) preenche os slots vazios e também registra o arquivo na biblioteca local. F1–F9 disparam os nove primeiros slots fixos. Os slots atribuídos e as regras da rotação são persistidos no IndexedDB e incluídos no backup JSON, filtrando referências a mídia ausente na restauração.
+
+A rotação de vinhetas pode ser ativada para inserir uma vinheta após um intervalo configurável de músicas concluídas (2–12). A inserção é feita na fila; eventos já priorizados de agenda/campanha mantêm precedência. O recurso depende da automação local ativa para tocar sem intervenção e não substitui o motor Windows residente. A interface do console também foi limpa de cartões estáticos que simulavam status de módulos; agora leva aos módulos reais de redação e OBS.

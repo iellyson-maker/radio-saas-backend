@@ -38,14 +38,14 @@
   const matches=item=>item&&item.enabled===true&&item.time===parts.timeKey&&(item.day==="*"||Number(item.day)===parts.day);
   for(const item of Array.isArray(schedules)?schedules:[]){
    if(!matches(item)||item.lastFiredAt===minuteKey)continue;
-   const media=mediaLookup(item.mediaId,lookup);item.lastFiredAt=minuteKey;
-   if(media)events.push({kind:"schedule",item,media});
+   const media=mediaLookup(item.mediaId,lookup);if(!media)continue;
+   item.lastFiredAt=minuteKey;events.push({kind:"schedule",item,media});
   }
   for(const item of Array.isArray(campaigns)?campaigns:[]){
    if(!matches(item)||item.lastFiredAt===minuteKey||!validDate(item.startDate)||!validDate(item.endDate))continue;
    if(item.endDate<item.startDate||parts.dateKey<item.startDate||parts.dateKey>item.endDate)continue;
-   const media=mediaLookup(item.mediaId,lookup);item.lastFiredAt=minuteKey;
-   if(media)events.push({kind:"campaign",item,media});
+   const media=mediaLookup(item.mediaId,lookup);if(!media)continue;
+   item.lastFiredAt=minuteKey;events.push({kind:"campaign",item,media});
   }
   return {parts,minuteKey,events};
  }

@@ -36,6 +36,13 @@ test("backup normalization rejects wrong schema and filters invalid records",()=
  assert.throws(()=>normalizeBackup({...payload,logs:"not-array"}),/Campo inválido/);
 });
 
+test("missing local media does not consume the scheduled minute",()=>{
+ const date=new Date("2026-10-20T12:15:00.000Z"),tz="America/Sao_Paulo",p=stationClockParts(date,tz);
+ const schedules=[{id:"s1",label:"Jingle",mediaId:"missing",time:p.timeKey,day:"*",enabled:true}];
+ assert.equal(collectDueItems(schedules,[],()=>null,date,tz).events.length,0);
+ assert.equal(schedules[0].lastFiredAt,undefined);
+ assert.equal(collectDueItems(schedules,[],()=>({id:"missing"}),date,tz).events.length,1);
+});
 test("invalid campaign date ranges never enter the scheduler",()=>{
  const date=new Date("2026-10-20T12:15:00.000Z"),tz="America/Sao_Paulo",p=stationClockParts(date,tz);
  const c=[{id:"c",name:"bad",mediaId:"m",time:p.timeKey,day:"*",startDate:"2026-11-01",endDate:"2026-10-01",enabled:true}];

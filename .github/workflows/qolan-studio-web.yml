@@ -34,3 +34,38 @@ jobs:
         run: npm run check
       - name: HTTP smoke tests
         run: npm test
+
+  production-smoke:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: test-web
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Wait for Render deploy and verify public service
+        env:
+          QOLAN_URL: https://qolan-studio-web.onrender.com
+        run: |
+          set -euo pipefail
+          EXPECTED_VERSION="$(node -p "require('./web/package.json').version")"
+          for attempt in $(seq 1 36); do
+            if curl --fail --silent --show-error --max-time 15 "$QOLAN_URL/health" -o /tmp/qolan-health.json; then
+              if node -e 'const fs=require("node:fs"); const h=JSON.parse(fs.readFileSync("/tmp/qolan-health.json","utf8")); process.exit(h.ok && h.product === "Qolan Studio" && h.version === process.env.EXPECTED_VERSION ? 0 : 1)' ; then
+                curl --fail --silent --show-error --max-time 15 "$QOLAN_URL/" -o /tmp/qolan-index.html
+                curl --fail --silent --show-error --max-time 15 "$QOLAN_URL/app.js" -o /tmp/qolan-app.js
+                grep -q "view-programming" /tmp/qolan-index.html
+                grep -q "indexedDB.open" /tmp/qolan-app.js
+                echo "Public Qolan service verified at version $EXPECTED_VERSION."
+                exit 0
+              fi
+            fi
+            echo "Waiting for Render to serve expected version $EXPECTED_VERSION (attempt $attempt/36)..."
+            sleep 10
+          done
+          echo "Render deployment did not expose the expected Qolan Studio version in time."
+          cat /tmp/qolan-health.json || true
+          exit 1

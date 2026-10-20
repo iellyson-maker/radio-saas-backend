@@ -1,6 +1,6 @@
 const test=require("node:test");
 const assert=require("node:assert/strict");
-const {stationClockParts,collectDueItems,normalizeBackup}=require("../public/logic.js");
+const {stationClockParts,collectDueItems,normalizeBackup,normalizeCartSlots,fillEmptyCartSlots,advanceJingleRotation}=require("../public/logic.js");
 const {parseFeed,fetchAllowedFeed,validateFeedUrl,readLimitedBody}=require("../server");
 
 test("station clock follows configured timezone and handles date rollover",()=>{
@@ -43,6 +43,28 @@ test("missing local media does not consume the scheduled minute",()=>{
  assert.equal(schedules[0].lastFiredAt,undefined);
  assert.equal(collectDueItems(schedules,[],()=>({id:"missing"}),date,tz).events.length,1);
 });
+test("cart slots stay fixed and bulk-import assignment fills only empty slots",()=>{
+ const slots=normalizeCartSlots(["j1",null,"s1"],12);
+ assert.equal(slots.length,12);
+ assert.deepEqual(slots.slice(0,3),["j1",null,"s1"]);
+ const filled=fillEmptyCartSlots(slots,["j2","j3","j4"],12);
+ assert.deepEqual(filled.assigned,[{slot:1,mediaId:"j2"},{slot:3,mediaId:"j3"},{slot:4,mediaId:"j4"}]);
+ assert.deepEqual(filled.overflow,[]);
+ assert.equal(fillEmptyCartSlots(Array(2).fill("busy"),["extra"],2).overflow[0],"extra");
+});
+
+test("jingle rotation inserts on configured music cadence, and skips non-music",()=>{
+ let state={enabled:true,every:3};
+ const first=advanceJingleRotation(state,"music",0,true);
+ assert.deepEqual(first,{counter:1,insert:false,every:3});
+ const second=advanceJingleRotation(state,"music",first.counter,true);
+ assert.deepEqual(second,{counter:2,insert:false,every:3});
+ const third=advanceJingleRotation(state,"music",second.counter,true);
+ assert.deepEqual(third,{counter:0,insert:true,every:3});
+ assert.deepEqual(advanceJingleRotation(state,"jingle",2,true),{counter:2,insert:false,every:3});
+ assert.deepEqual(advanceJingleRotation(state,"music",2,false),{counter:3,insert:false,every:3});
+});
+
 test("invalid campaign date ranges never enter the scheduler",()=>{
  const date=new Date("2026-10-20T12:15:00.000Z"),tz="America/Sao_Paulo",p=stationClockParts(date,tz);
  const c=[{id:"c",name:"bad",mediaId:"m",time:p.timeKey,day:"*",startDate:"2026-11-01",endDate:"2026-10-01",enabled:true}];

@@ -14,7 +14,7 @@ const isExternalDatabase = !!databaseUrl && (() => {
     return true;
   }
 })();
-const sslEnabled = process.env.DATABASE_SSL === 'true' || (isExternalDatabase && process.env.DATABASE_SSL !== 'false');
+const sslEnabled = isExternalDatabase || process.env.DATABASE_SSL === 'true';
 const pool = new Pool({
   connectionString: databaseUrl,
   // Keep certificate validation enabled whenever TLS is used.

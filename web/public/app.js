@@ -936,8 +936,8 @@ function bindEvents(){
     if(e.key==="F10"){e.preventDefault();showView("console");return;}
     if(/^F[1-9]$/.test(e.key)){
       e.preventDefault();const index=Number(e.key.slice(1))-1;
-      const carts=media.filter(m=>(cartFilter==="all"||m.type===cartFilter)&&["jingle","spot","track"].includes(m.type)).sort((a,b)=>a.name.localeCompare(b.name,"pt-BR"));
-      if(carts[index])playCart(carts[index],"cartwall "+e.key);
+      const item=findMedia(cartSlots[index]);
+      if(item)playCart(item,"cartwall "+e.key);
     }
   });
   mainAudio.addEventListener("play",()=>{if(!activeSession)startSession(pendingSource);setPlayState("REPRODUZINDO",true);$("playBtn").textContent="Ⅱ";setStatus("REPRODUZINDO");initializeMeter();});

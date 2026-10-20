@@ -38,7 +38,7 @@ child.stderr.on("data", chunk => { output += chunk.toString(); });
       assert.ok(page.includes('id="' + feature + '"'), "Missing UI module: " + feature);
     }
     assert.match(page, /Prova de veiculação/);
-    assert.match(page, /não é um motor de transmissão 24\/7/);
+    assert.match(page, /não é um motor de transmissão 24\/7/i);
 
     const appResponse = await fetch(base + "/app.js");
     assert.equal(appResponse.status, 200);

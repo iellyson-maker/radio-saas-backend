@@ -25,12 +25,12 @@ test("coincident schedule and campaign events preserve configured order and are 
 });
 
 test("backup normalization rejects wrong schema and filters invalid records",()=>{
- const payload={product:"Qolan Studio",schemaVersion:1,settings:{stationName:" Rádio Teste ",frequency:" 99.1 FM ",timezone:"America/Sao_Paulo",unknown:"x"},
+ const payload={product:"Qolan Studio",schemaVersion:1,settings:{stationName:" Rádio Teste ",frequency:" 99.1 FM ",timezone:"America/Sao_Paulo",mainVolume:54,cartVolume:83,previewVolume:42,mainOutput:"device-specific-id",unknown:"x"},
   schedules:[{id:"s1",label:"Manhã",mediaId:"m1",time:"08:30",day:1,enabled:true},{id:"bad",label:"Quebrado",mediaId:"m1",time:"99:88",day:9,enabled:true}],
   campaigns:[{id:"c1",name:"Spot",mediaId:"m1",time:"12:00",day:"*",startDate:"2026-10-20",endDate:"2026-10-21",enabled:true}],
   logs:[{id:"l1",event:"play-complete",message:"Tocou",timestamp:"2026-10-20T12:00:00.000Z",seconds:5}],queueIds:["m1","absent"],cartSlots:["m1","absent"],jingleRotation:{enabled:true,every:3,counter:2,index:1}};
  const clean=normalizeBackup(payload,new Set(["m1"]));
- assert.equal(clean.settings.stationName,"Rádio Teste");assert.equal(clean.schedules.length,1);assert.equal(clean.campaigns.length,1);
+ assert.equal(clean.settings.stationName,"Rádio Teste");assert.equal(clean.settings.mainVolume,54);assert.equal(clean.settings.cartVolume,83);assert.equal(clean.settings.previewVolume,42);assert.equal(clean.settings.mainOutput,"");assert.equal(clean.schedules.length,1);assert.equal(clean.campaigns.length,1);
  assert.equal(clean.logs.length,1);assert.deepEqual(clean.queueIds,["m1"]);assert.equal(clean.cartSlots[0],"m1");assert.equal(clean.cartSlots[1],null);assert.equal(clean.cartSlots.length,12);assert.deepEqual(clean.jingleRotation,{enabled:true,every:3,counter:2,index:1});
  assert.throws(()=>normalizeBackup({...payload,schemaVersion:9}),/backup compatível/);
  assert.throws(()=>normalizeBackup({...payload,logs:"not-array"}),/Campo inválido/);

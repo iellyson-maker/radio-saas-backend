@@ -1,21 +1,21 @@
 # Qolan Studio — plataforma de operação de rádio
 
-Projeto da plataforma de automação de rádio, com o backend SaaS existente e a primeira interface web em `web/`.
+Projeto do Qolan Studio: uma plataforma híbrida para gestão de emissoras, console web e futura engine local de playout.
 
 ## Aplicação web
 
-A interface Qolan Studio Web tem player no navegador, biblioteca local, fila e cartucheira. Consulte [web/README.md](web/README.md) para execução, publicação e limitações.
+A primeira aplicação está em **web/**. Inclui console de operação, biblioteca persistida localmente no navegador, fila, cartucheira, programação e campanhas locais, diagnóstico e exportação de registros.
 
-**Estado atual:** MVP de console web. Os arquivos de áudio não são enviados ao servidor; não existe ainda autenticação SaaS, sincronização entre navegadores, transmissão ou automação 24/7.
+**Estado atual: MVP web local-first.** Ainda não há autenticação SaaS, sincronização multiusuário, object storage, engine Windows 24/7 ou streaming. A página web não deve ser usada como transmissor principal de uma rádio.
 
-## Deploy da interface Qolan Studio no Render
+## Publicação no Render
 
-Para criar somente a interface web sem provisionar os recursos existentes do backend, use o arquivo **`render-qolan.yaml`** como caminho personalizado do Blueprint. Ele cria o serviço `qolan-studio-web` no plano Free, com diretório raiz `web`, validação/teste no build e health check em `/health`.
+O arquivo **render-qolan.yaml** configura o serviço web **qolan-studio-web** no plano Free, no diretório **web**, com validação de sintaxe, teste HTTP de fumaça e health check.
 
-Render aceita escolher um caminho personalizado para o arquivo Blueprint durante a configuração: [documentação oficial de Blueprints](https://render.com/docs/infrastructure-as-code). Não selecione o Blueprint raiz `render.yaml` para uma instalação apenas web: ele define também o backend e o PostgreSQL existentes, ambos configurados no plano Starter.
+## Plano de evolução
 
-O plano Free pode suspender o serviço depois de inatividade; por isso esta versão não é adequada para operação de rádio 24/7.
+Consulte **docs/PRODUCT_STRATEGY.md** para a análise competitiva, arquitetura-alvo, fases e critérios de aceite.
 
-## Backend SaaS existente
+## Backend existente
 
-O backend Express e o schema PostgreSQL foram mantidos. O arquivo `render.yaml` original foi preservado para não mudar ou recriar os recursos já definidos para o backend.
+O backend e o schema PostgreSQL prévios permanecem na raiz do repositório. A integração de autenticação, banco e armazenamento com o console web ainda precisa ser implementada e auditada antes de virar um SaaS multiusuário.

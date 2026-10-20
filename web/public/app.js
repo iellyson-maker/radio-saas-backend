@@ -532,7 +532,8 @@ async function removeMedia(id){
   try{await dbDelete("media",id);}catch(_){}
   if(urlSet.has(m.url)){URL.revokeObjectURL(m.url);urlSet.delete(m.url);}
   writeLog("media-delete","Removido: "+m.name,{mediaId:id,title:m.name,type:m.type,result:"removido localmente"});
-  drawLibrary();drawQueue();drawSchedules();drawCampaigns();persistState();
+  drawLibrary();drawQueue();drawSchedules();drawCampaigns();renderCurrent();persistState();
+  if(auto&&current===null&&queue.length&&!currentCart)next();
 }
 function scheduleTick(){
   if(!auto||!db)return;

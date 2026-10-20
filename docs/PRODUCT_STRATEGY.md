@@ -99,9 +99,23 @@ A página web jamais deve ser descrita como um transmissor 24/7. Fechar ou suspe
 7. **Instalação e atualização segura:** assinaturas, migrações, rollback e atualização automática testada.
 8. **Produto adaptável:** configuração por estação, layouts operacionais, acessibilidade e atalhos configuráveis.
 
+## Auditoria técnica e versão 0.5.1
+
+A versão 0.5.1 endurece o leitor RSS com redirecionamentos manuais validados antes de cada salto, limite de bytes aplicado durante a leitura, deduplicação de pedidos simultâneos e cache temporário de último recurso quando a fonte falha. A API retorna JSON 404 para endpoints desconhecidos. O núcleo compartilhado testa fuso horário da emissora, ordem determinística de eventos simultâneos, idempotência por minuto e normalização defensiva de backups. O relógio, as datas e a agenda agora usam o fuso da emissora. A exclusão de mídia interrompe reproduções que dependam do arquivo removido.
+
+A versão continua sendo um console local-first: testes unitários e smoke test não substituem validação em navegador com arquivos, interfaces de áudio e OBS reais.
+
 ## Estado da versão 0.5.0
 
-A área Conteúdo ao vivo consome feeds RSS permitidos da Agência Brasil e oferece pauta persistida apenas no navegador. A cartwall usa um elemento de áudio separado e reduz temporariamente o volume do player principal, mas ainda não é um mixer com saídas profissionais. O montador musical evita repetições dentro do bloco e faixas já presentes na fila. O conector OBS usa WebSocket v5 e precisa ser testado com a instalação local do OBS; em alguns navegadores/contextos será necessária a bridge do Qolan Engine.
+A área Conteúdo ao vivo consome feeds RSS permitidos da Agência Brasil e oferece pauta persistida apenas no navegador. O leitor usa allowlist de domínio, redirecionamentos manuais restritos ao domínio oficial, limite de payload e cache stale-if-error. A cartwall usa um elemento de áudio separado e reduz temporariamente o volume do player principal, mas ainda não é um mixer com saídas profissionais. O montador musical evita repetições dentro do bloco e faixas já presentes na fila. O conector OBS usa WebSocket v5 e precisa ser testado com a instalação local do OBS; em alguns navegadores/contextos será necessária a bridge do Qolan Engine.
+
+## Pendências críticas de engenharia
+
+- O scheduler ainda roda na aba do navegador e não é um motor de playout resiliente; não deve comandar uma emissora sem Qolan Engine.
+- O áudio principal e o cartwall usam elementos HTML distintos, porém não têm garantia de saídas físicas independentes, crossfade profissional ou mix-minus.
+- O histórico atual é editável/apagável no navegador e não constitui prova jurídica de veiculação.
+- As rotas do backend raiz `/organizations` agora são protegidas por um segredo administrativo temporário (`API_ADMIN_TOKEN`), mas ainda não têm autenticação individual, RBAC ou isolamento de tenant comprovado. Não liberar uso SaaS externo antes de implementar login e testes de isolamento.
+- O PostgreSQL não deve aceitar certificados TLS inválidos. Conexões externas exigem configuração explícita `DATABASE_SSL=true` com cadeia de confiança válida.
 
 ## Estado em produção
 
@@ -115,3 +129,10 @@ A versão web atual é um MVP local-first servido pelo Render. IndexedDB armazen
 - Migrações e backups testados antes de alterar dados persistentes.
 - CI passa no commit exato que será implantado; health check e versão/commit confirmados no Render.
 - Notas da versão declaram o que entrou, o que não entrou e limitações conhecidas.
+
+
+## Qolan Studio Web 0.6.0 — cartwall de operação
+
+A cartwall foi reformulada como cartucheira fixa de 12 slots, com estado de slot, categoria, duração, substituição e remoção sem apagar o arquivo da biblioteca. A importação direta por categoria (vinhetas, comerciais, trilhas) preenche os slots vazios e também registra o arquivo na biblioteca local. F1–F9 disparam os nove primeiros slots fixos. Os slots atribuídos e as regras da rotação são persistidos no IndexedDB e incluídos no backup JSON, filtrando referências a mídia ausente na restauração.
+
+A rotação de vinhetas pode ser ativada para inserir uma vinheta após um intervalo configurável de músicas concluídas (2–12). A inserção é feita na fila; eventos já priorizados de agenda/campanha mantêm precedência. O recurso depende da automação local ativa para tocar sem intervenção e não substitui o motor Windows residente. A interface do console também foi limpa de cartões estáticos que simulavam status de módulos; agora leva aos módulos reais de redação e OBS.

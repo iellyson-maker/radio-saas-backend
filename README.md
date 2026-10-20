@@ -19,3 +19,8 @@ Consulte **docs/PRODUCT_STRATEGY.md** para a análise competitiva, arquitetura-a
 ## Backend existente
 
 O backend e o schema PostgreSQL prévios permanecem na raiz do repositório. A integração de autenticação, banco e armazenamento com o console web ainda precisa ser implementada e auditada antes de virar um SaaS multiusuário.
+
+
+## Nota de segurança da API administrativa
+
+As rotas provisórias `GET/POST /organizations` do backend na raiz exigem `Authorization: Bearer <API_ADMIN_TOKEN>`. Sem token forte de pelo menos 32 caracteres configurado no ambiente, as rotas respondem `503` e permanecem desativadas. Esse token é uma proteção administrativa temporária, não substitui login, sessões, RBAC ou autorização por organização. Não disponibilize a API a clientes finais até concluir esses controles.

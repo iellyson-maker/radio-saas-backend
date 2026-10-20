@@ -11,7 +11,7 @@
     .view { display: none; }
     .view.active { display: block; }
   </style>
-  <link rel="stylesheet" href="/styles.css?v=0.5.0">
+  <link rel="stylesheet" href="/styles.css?v=0.6.0">
 </head>
 <body>
 <div class="shell">
@@ -34,7 +34,7 @@
       <button class="nav-item" data-view="diagnostics"><span class="nav-icon">⌁</span> Diagnóstico</button>
       <button class="nav-item" data-view="settings"><span class="nav-icon">⚙</span> Configurações</button>
     </nav>
-    <div class="sidebar-bottom"><div class="version-row"><span>QOLAN WEB</span><b>0.5.0</b></div><p>Versão web de avaliação. Não é um motor de transmissão 24/7.</p></div>
+    <div class="sidebar-bottom"><div class="version-row"><span>QOLAN WEB</span><b>0.6.0</b></div><p>Versão web de avaliação. Não é um motor de transmissão 24/7.</p></div>
   </aside>
 
   <div class="work-area">
@@ -125,28 +125,42 @@
                 <div class="cart-head-actions"><span id="cartStatus" class="cart-state">SEM DISPARO</span><button id="stopCartBtn" class="btn btn-quiet btn-small" disabled>Parar</button><span class="hotkey-hint">ATALHOS <b>F1–F9</b></span></div>
               </div>
               <audio id="cartAudio" preload="none"></audio>
+              <input id="cartSlotInput" type="file" accept="audio/*,.mp3,.wav,.ogg,.flac,.m4a,.aac,.opus,.wma" hidden>
+              <input id="cartImportJingleInput" type="file" accept="audio/*,.mp3,.wav,.ogg,.flac,.m4a,.aac,.opus,.wma" multiple hidden>
+              <input id="cartImportSpotInput" type="file" accept="audio/*,.mp3,.wav,.ogg,.flac,.m4a,.aac,.opus,.wma" multiple hidden>
+              <input id="cartImportTrackInput" type="file" accept="audio/*,.mp3,.wav,.ogg,.flac,.m4a,.aac,.opus,.wma" multiple hidden>
               <div class="cart-live-label"><span class="cart-live-dot"></span><b id="cartNowLabel">Cartwall aguardando disparo</b><small id="cartDuckingLabel">Áudio de apoio</small></div>
+              <div class="cart-import-toolbar">
+                <div class="cart-import-copy"><b>Cartões de disparo</b><small><span id="cartSlotCount">0/12</span> carregados · clique no cartão para disparar</small></div>
+                <div class="cart-import-actions">
+                  <button type="button" class="btn btn-small btn-primary" data-cart-import="jingle">＋ Vinhetas</button>
+                  <button type="button" class="btn btn-small btn-quiet" data-cart-import="spot">＋ Comerciais</button>
+                  <button type="button" class="btn btn-small btn-quiet" data-cart-import="track">＋ Trilhas</button>
+                </div>
+              </div>
               <div class="cart-tabs"><button class="active" data-cart-filter="all">TODOS</button><button data-cart-filter="jingle">VINHETAS</button><button data-cart-filter="spot">COMERCIAIS</button><button data-cart-filter="track">TRILHAS</button></div>
-              <div id="cartList" class="cart-grid empty-state">Importe vinhetas, comerciais ou trilhas para montar a cartucheira.</div>
-              <p class="panel-note">Nesta versão, o disparo usa o mesmo player principal. Canais independentes estão previstos para a engine local.</p>
+              <div id="cartList" class="cart-grid"></div>
+              <p class="panel-note">O cartwall usa um elemento de áudio separado no navegador, mas compartilha a saída do sistema. Saídas físicas independentes exigem a Qolan Engine local.</p>
             </section>
 
             <div class="studio-support-grid">
               <section class="panel support-panel news-support">
-                <div class="support-head"><span class="support-icon">≡</span><div><span class="eyebrow">APOIO AO LOCUTOR</span><h2>Notícias & pautas</h2></div></div>
-                <div class="support-status"><span class="support-status-dot"></span> CONCEITO VISUAL <span>•</span> NÃO CONECTADO</div>
+                <div class="support-head"><span class="support-icon">≡</span><div><span class="eyebrow">APOIO AO LOCUTOR</span><h2>Redação ao vivo</h2></div><span class="module-ready">MÓDULO</span></div>
+                <div class="support-status"><span class="support-status-dot"></span> FEEDS RSS + PAUTA LOCAL</div>
                 <div class="news-preview">
-                  <div class="news-row"><span class="news-tag">RSS</span><div><b>Manchetes da emissora</b><small>Espaço para fontes de notícias e pautas</small></div></div>
-                  <div class="news-row"><span class="news-tag news-tag-muted">LOC</span><div><b>Notas do locutor</b><small>Conteúdo de apoio durante o programa</small></div></div>
+                  <div class="news-row"><span class="news-tag">RSS</span><div><b>Manchetes</b><small>Fontes editoriais com link para a matéria original</small></div></div>
+                  <div class="news-row"><span class="news-tag news-tag-muted">LOC</span><div><b>Roteiro do locutor</b><small>Notas salvas neste navegador</small></div></div>
                 </div>
+                <button type="button" class="support-open-button" data-go="live">Abrir redação <span>→</span></button>
               </section>
               <section class="panel support-panel visual-support">
-                <div class="support-head"><span class="support-icon support-icon-blue">▣</span><div><span class="eyebrow">RÁDIO VISUAL</span><h2>Estúdio visual</h2></div></div>
+                <div class="support-head"><span class="support-icon support-icon-blue">▣</span><div><span class="eyebrow">RÁDIO VISUAL</span><h2>Controle de vídeo</h2></div><span class="module-ready module-ready-blue">OBS</span></div>
                 <div class="visual-preview">
-                  <div class="visual-preview-top"><span>PRÉVIA DE CENA</span><span class="preview-rec">OFFLINE</span></div>
-                  <div class="visual-stage"><span class="visual-q">Q</span><div><b>QOLAN STUDIO</b><small>PROGRAMA AO VIVO</small></div><span class="visual-corner">16:9</span></div>
+                  <div class="visual-preview-top"><span>CONEXÃO LOCAL</span><span class="preview-rec">AGUARDANDO</span></div>
+                  <div class="visual-stage"><span class="visual-q">Q</span><div><b>CENAS DO ESTÚDIO</b><small>CONEXÃO VIA OBS WEBSOCKET</small></div><span class="visual-corner">16:9</span></div>
                 </div>
-                <div class="support-status support-status-blue">CONCEITO VISUAL <span>•</span> OBS / vMix NÃO CONECTADO</div>
+                <div class="support-status support-status-blue">CONECTE O OBS PARA CONTROLAR AS CENAS</div>
+                <button type="button" class="support-open-button support-open-blue" data-go="visual">Abrir controle OBS <span>→</span></button>
               </section>
             </div>
 
@@ -179,6 +193,14 @@
             <label for="rotationCount">Quantidade de faixas<select id="rotationCount"><option value="5">5 faixas</option><option value="8" selected>8 faixas</option><option value="10">10 faixas</option><option value="15">15 faixas</option><option value="20">20 faixas</option></select></label>
             <button type="button" id="buildRotationBtn" class="btn btn-primary">Montar bloco musical →</button></div>
           <div id="rotationSummary" class="rotation-summary">Aguardando montagem. Classifique os arquivos como Música na Biblioteca.</div>
+        </section>
+        <section class="panel jingle-rotation-panel">
+          <div class="panel-head studio-panel-head"><div class="studio-panel-title"><span class="panel-index panel-index-hot">ID</span><div><span class="eyebrow">INSERÇÃO AUTOMÁTICA</span><h2>Vinhetas na rotação</h2></div></div><label class="rotation-toggle"><input id="jingleRotationEnabled" type="checkbox"><span>Ativar inserções</span></label></div>
+          <div class="jingle-rotation-controls">
+            <div><b>Inserir uma vinheta após cada</b><small>O sistema coloca uma vinheta no início da fila depois de concluir a quantidade configurada de músicas.</small></div>
+            <label for="jingleRotationEvery">Intervalo<select id="jingleRotationEvery"><option value="2">2 músicas</option><option value="3" selected>3 músicas</option><option value="4">4 músicas</option><option value="5">5 músicas</option><option value="6">6 músicas</option><option value="8">8 músicas</option><option value="10">10 músicas</option></select></label>
+            <div class="jingle-rotation-state"><span id="jingleRotationStatus" class="state-pill warning-pill">DESATIVADA</span><small id="jingleRotationDetail">Carregue vinhetas na cartwall para habilitar a regra.</small></div>
+          </div>
         </section>
         <div class="split-grid">
           <section class="panel form-panel"><div class="panel-head"><div><span class="eyebrow">NOVO EVENTO</span><h2>Agendamento de áudio</h2></div></div>
@@ -265,14 +287,15 @@
           <section class="panel form-panel"><div class="panel-head"><div><span class="eyebrow">EMISSORA</span><h2>Identificação</h2></div></div>
             <form id="settingsForm" class="form-grid"><label>Nome da rádio<input id="stationNameInput" maxlength="100" required value="Rádio Central"></label><label>Frequência / identificação<input id="stationFrequencyInput" maxlength="50" value="98.7 FM"></label><label>Fuso horário <select id="timezoneInput"><option value="America/Sao_Paulo">Brasília (America/Sao_Paulo)</option><option value="America/Manaus">Manaus (America/Manaus)</option><option value="America/Rio_Branco">Rio Branco (America/Rio_Branco)</option><option value="UTC">UTC</option></select></label><button class="btn btn-primary" type="submit">Salvar configurações</button></form>
           </section>
-          <section class="panel form-panel"><div class="panel-head"><div><span class="eyebrow">DADOS DESTA SESSÃO</span><h2>Backup e manutenção</h2></div></div><div class="maintenance-actions"><button class="btn btn-quiet" id="backupBtn">Exportar backup de dados</button><button class="btn btn-quiet" id="restoreBtn">Importar backup JSON</button><input id="restoreInput" type="file" accept=".json,application/json" hidden><button class="btn btn-danger" id="clearMediaBtn">Remover biblioteca local</button></div><p class="panel-note">Backup inclui configurações, agenda, campanhas, fila e registros. Os metadados do backup não transportam os arquivos de áudio, que precisam ser importados separadamente.</p></section>
+          <section class="panel form-panel"><div class="panel-head"><div><span class="eyebrow">DADOS DESTA SESSÃO</span><h2>Backup e manutenção</h2></div></div><div class="maintenance-actions"><button class="btn btn-quiet" id="backupBtn">Exportar backup de dados</button><button class="btn btn-quiet" id="restoreBtn">Importar backup JSON</button><input id="restoreInput" type="file" accept=".json,application/json" hidden><button class="btn btn-danger" id="clearMediaBtn">Remover biblioteca local</button></div><p class="panel-note">Backup inclui configurações, agenda, campanhas, fila e registros, mas não os áudios. Para reconstruir a fila e religar agendamentos, mantenha os mesmos arquivos já importados neste navegador; referências a áudios ausentes não podem ser recuperadas apenas pelo JSON.</p></section>
         </div>
       </section>
     </main>
-    <footer class="global-footer"><span>QOLAN STUDIO WEB 0.5.0</span><span id="storageFooter">Preparando armazenamento local…</span><span>Console de avaliação · sem transmissão contínua</span></footer>
+    <footer class="global-footer"><span>QOLAN STUDIO WEB 0.6.0</span><span id="storageFooter">Preparando armazenamento local…</span><span>Console de avaliação · sem transmissão contínua</span></footer>
   </div>
 </div>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
-<script src="/app.js?v=0.5.0"></script>
+<script src="/logic.js?v=0.6.0"></script>
+<script src="/app.js?v=0.6.0"></script>
 </body>
 </html>

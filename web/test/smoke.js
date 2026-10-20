@@ -28,29 +28,36 @@ child.stderr.on("data", chunk => { output += chunk.toString(); });
     assert.equal(health.ok, true);
     assert.equal(health.service, "qolan-studio-web");
     assert.equal(health.product, "Qolan Studio");
-    assert.equal(health.version, "0.2.0");
+    assert.equal(health.version, "0.2.1");
 
     const pageResponse = await fetch(base + "/");
     assert.equal(pageResponse.status, 200);
     const page = await pageResponse.text();
     assert.match(page, /Qolan Studio/);
+    assert.match(page, /styles\.css\?v=0\.2\.1/);
+    assert.match(page, /app\.js\?v=0\.2\.1/);
+    assert.match(page, /\.view\s*\{\s*display:\s*none\s*;/);
+    assert.match(page, /\.view\.active\s*\{\s*display:\s*block\s*;/);
     for (const feature of ["view-console", "view-library", "view-programming", "view-commercials", "view-logs", "view-diagnostics", "view-settings"]) {
       assert.ok(page.includes('id="' + feature + '"'), "Missing UI module: " + feature);
     }
     assert.match(page, /Prova de veiculação/);
     assert.match(page, /não é um motor de transmissão 24\/7/i);
 
-    const appResponse = await fetch(base + "/app.js");
+    const appResponse = await fetch(base + "/app.js?v=0.2.1");
     assert.equal(appResponse.status, 200);
     const appJs = await appResponse.text();
     assert.match(appJs, /indexedDB\.open/);
     assert.match(appJs, /scheduleTick/);
     assert.match(appJs, /play-complete/);
 
-    const cssResponse = await fetch(base + "/styles.css");
+    const cssResponse = await fetch(base + "/styles.css?v=0.2.1");
     assert.equal(cssResponse.status, 200);
     assert.match(cssResponse.headers.get("content-type") || "", /text\/css/);
-    console.log("Smoke tests passed: health, version, seven UI modules, persistent media, local scheduler, logs and CSS.");
+    const css = await cssResponse.text();
+    assert.match(css, /\.view\{display:none\}/);
+    assert.match(css, /\.shell\{display:grid;/);
+    console.log("Smoke tests passed: health/version 0.2.1, versioned assets, single active view, layout CSS, seven UI modules, persistent media, local scheduler and logs.");
   } catch (error) {
     console.error(error);
     console.error(output);

@@ -84,5 +84,28 @@
   const queueIds=qq.filter(x=>typeof x==="string"&&known.has(x)).slice(0,2000);
   return {settings,schedules,campaigns,logs,queueIds};
  }
- return {isValidTimeZone,stationClockParts,collectDueItems,normalizeBackup};
+ function normalizeCartSlots(slots=[],size=12){
+  const result=Array.from({length:Math.max(1,Math.min(24,Number(size)||12))},(_,i)=>typeof slots[i]==="string"?slots[i]:null);
+  return result;
+ }
+ function fillEmptyCartSlots(slots=[],mediaIds=[],size=12){
+  const next=normalizeCartSlots(slots,size),assigned=[],overflow=[];
+  for(const id of Array.from(mediaIds||[]).filter(x=>typeof x==="string"&&x)){
+   const index=next.findIndex(x=>!x);
+   if(index<0){overflow.push(id);continue;}
+   next[index]=id;assigned.push({slot:index,mediaId:id});
+  }
+  return {slots:next,assigned,overflow};
+ }
+ function advanceJingleRotation(config={},currentType,counter=0,hasJingles=false){
+  const every=Math.max(2,Math.min(12,Math.floor(Number(config.every)||3)));
+  const enabled=config.enabled===true;
+  const safeCounter=Math.max(0,Math.min(1000,Math.floor(Number(counter)||0)));
+  if(!enabled||currentType!=="music")return {counter:safeCounter,insert:false,every};
+  const next=safeCounter+1;
+  if(next<every)return {counter:next,insert:false,every};
+  if(hasJingles)return {counter:0,insert:true,every};
+  return {counter:next,insert:false,every};
+ }
+ return {isValidTimeZone,stationClockParts,collectDueItems,normalizeBackup,normalizeCartSlots,fillEmptyCartSlots,advanceJingleRotation};
 });

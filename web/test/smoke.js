@@ -30,7 +30,7 @@ child.stderr.on("data", chunk => { output += chunk.toString(); });
     for (const text of ["Console de estúdio","Cartwall","Conteúdo ao vivo","Rádio visual / OBS","Montador de bloco",'id="view-live"','id="view-visual"','id="cartAudio"','id="buildRotationBtn"','id="obsConnectBtn"','id="newsSourceSelect"','id="liveNotes"']) {
       assert.ok(page.includes(text), "Missing UI element: " + text);
     }
-    assert.match(page,/styles\\.css\\?v=0\\.5\\.1/); assert.match(page,/app\\.js\\?v=0\\.5\\.1/);
+    assert.ok(page.includes("styles.css?v=0.5.1")); assert.ok(page.includes("app.js?v=0.5.1"));
     assert.match(page,/\.view\s*\{\s*display:\s*none\s*;/);
     assert.match(page,/\.view\.active\s*\{\s*display:\s*block\s*;/);
     for (const view of ["console","library","programming","commercials","live","visual","logs","diagnostics","settings"]) assert.ok(page.includes('id="view-'+view+'"'),"Missing module "+view);

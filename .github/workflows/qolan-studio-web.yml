@@ -1,0 +1,38 @@
+name: Qolan Studio Web CI
+
+on:
+  push:
+    branches: [main, radioos-web-v0.1.0]
+    paths:
+      - "web/**"
+      - ".github/workflows/qolan-studio-web.yml"
+  pull_request:
+    paths:
+      - "web/**"
+      - ".github/workflows/qolan-studio-web.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package.json
+      - name: Install dependencies
+        run: npm install
+      - name: Check JavaScript syntax
+        run: npm run check
+      - name: HTTP smoke tests
+        run: npm test

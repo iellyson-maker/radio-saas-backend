@@ -35,6 +35,20 @@ jobs:
       - name: HTTP smoke tests
         run: npm test
 
+  backend-security:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install backend dependencies
+        run: npm install
+      - name: Backend security regression tests
+        run: npm test
+
   production-smoke:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: test-web

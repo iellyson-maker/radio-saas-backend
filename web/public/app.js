@@ -258,7 +258,7 @@ function drawLibrary(){
   fillMediaSelects();
 }
 function drawCarts(){
-  const rows=media.filter(m=>(cartFilter==="all"||m.type===cartFilter)&&["jingle","spot","track"].includes(m.type));
+  const rows=media.filter(m=>(cartFilter==="all"||m.type===cartFilter)&&["jingle","spot","track"].includes(m.type)).sort((a,b)=>a.name.localeCompare(b.name,"pt-BR"));
   const el=$("cartList");
   if(!rows.length){el.className="cart-grid empty-state";el.textContent="Importe vinhetas, comerciais ou trilhas para montar a cartucheira.";return;}
   el.className="cart-grid";

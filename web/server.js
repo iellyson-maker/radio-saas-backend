@@ -8,10 +8,10 @@ const PUBLIC_DIR = path.join(__dirname, "public");
 
 app.disable("x-powered-by");
 app.use(express.static(PUBLIC_DIR, {
-  maxAge: "1h",
+  maxAge: 0,
   etag: true,
   setHeaders(res, filePath) {
-    if (path.basename(filePath) === "index.html") {
+    if (["index.html", "app.js", "styles.css"].includes(path.basename(filePath))) {
       res.setHeader("Cache-Control", "no-cache, must-revalidate");
     }
   }

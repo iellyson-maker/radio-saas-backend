@@ -1,6 +1,6 @@
 const test=require("node:test");
 const assert=require("node:assert/strict");
-const {stationClockParts,collectDueItems,normalizeBackup,normalizeCartSlots,fillEmptyCartSlots,advanceJingleRotation}=require("../public/logic.js");
+const {stationClockParts,collectDueItems,normalizeBackup,normalizeCartSlotPrefs,normalizeCartSlots,fillEmptyCartSlots,advanceJingleRotation}=require("../public/logic.js");
 const {parseFeed,fetchAllowedFeed,validateFeedUrl,readLimitedBody}=require("../server");
 
 test("station clock follows configured timezone and handles date rollover",()=>{
@@ -28,10 +28,10 @@ test("backup normalization rejects wrong schema and filters invalid records",()=
  const payload={product:"Qolan Studio",schemaVersion:1,settings:{stationName:" Rádio Teste ",frequency:" 99.1 FM ",timezone:"America/Sao_Paulo",mainVolume:54,cartVolume:83,previewVolume:42,mainOutput:"device-specific-id",unknown:"x"},
   schedules:[{id:"s1",label:"Manhã",mediaId:"m1",time:"08:30",day:1,enabled:true},{id:"bad",label:"Quebrado",mediaId:"m1",time:"99:88",day:9,enabled:true}],
   campaigns:[{id:"c1",name:"Spot",mediaId:"m1",time:"12:00",day:"*",startDate:"2026-10-20",endDate:"2026-10-21",enabled:true}],
-  logs:[{id:"l1",event:"play-complete",message:"Tocou",timestamp:"2026-10-20T12:00:00.000Z",seconds:5}],queueIds:["m1","absent"],cartSlots:["m1","absent"],jingleRotation:{enabled:true,every:3,counter:2,index:1}};
+  logs:[{id:"l1",event:"play-complete",message:"Tocou",timestamp:"2026-10-20T12:00:00.000Z",seconds:5}],queueIds:["m1","absent"],cartSlots:["m1","absent"],cartSlotPrefs:[{label:"Vinheta de abertura",color:"#FF8800"},{label:"Texto sem cor válida",color:"red"}],jingleRotation:{enabled:true,every:3,counter:2,index:1}};
  const clean=normalizeBackup(payload,new Set(["m1"]));
  assert.equal(clean.settings.stationName,"Rádio Teste");assert.equal(clean.settings.mainVolume,54);assert.equal(clean.settings.cartVolume,83);assert.equal(clean.settings.previewVolume,42);assert.equal(clean.settings.mainOutput,"");assert.equal(clean.schedules.length,1);assert.equal(clean.campaigns.length,1);
- assert.equal(clean.logs.length,1);assert.deepEqual(clean.queueIds,["m1"]);assert.equal(clean.cartSlots[0],"m1");assert.equal(clean.cartSlots[1],null);assert.equal(clean.cartSlots.length,12);assert.deepEqual(clean.jingleRotation,{enabled:true,every:3,counter:2,index:1});
+ assert.equal(clean.logs.length,1);assert.deepEqual(clean.queueIds,["m1"]);assert.equal(clean.cartSlots[0],"m1");assert.equal(clean.cartSlots[1],null);assert.equal(clean.cartSlots.length,12);assert.deepEqual(clean.cartSlotPrefs[0],{label:"Vinheta de abertura",color:"#ff8800"});assert.deepEqual(clean.cartSlotPrefs[1],{label:"Texto sem cor válida",color:""});assert.equal(clean.cartSlotPrefs.length,12);assert.deepEqual(clean.jingleRotation,{enabled:true,every:3,counter:2,index:1});
  assert.throws(()=>normalizeBackup({...payload,schemaVersion:9}),/backup compatível/);
  assert.throws(()=>normalizeBackup({...payload,logs:"not-array"}),/Campo inválido/);
 });
@@ -43,6 +43,16 @@ test("missing local media does not consume the scheduled minute",()=>{
  assert.equal(schedules[0].lastFiredAt,undefined);
  assert.equal(collectDueItems(schedules,[],()=>({id:"missing"}),date,tz).events.length,1);
 });
+test("cart slot preferences sanitize names/colors and retain exactly 12 positions",()=>{
+ const prefs=normalizeCartSlotPrefs([{label:"  Vinheta abertura  ",color:"#ABCDEF"},{label:"x".repeat(80),color:"url(javascript:alert(1))"}],12);
+ assert.equal(prefs.length,12);
+ assert.deepEqual(prefs[0],{label:"Vinheta abertura",color:"#abcdef"});
+ assert.equal(prefs[1].label.length,40);
+ assert.equal(prefs[1].color,"");
+ assert.deepEqual(prefs[2],{label:"",color:""});
+ assert.deepEqual(normalizeCartSlotPrefs([],3),[{label:"",color:""},{label:"",color:""},{label:"",color:""}]);
+});
+
 test("cart slots stay fixed, prevent duplicate media and fill only empty slots",()=>{
  const slots=normalizeCartSlots(["j1",null,"s1"],12);
  assert.equal(slots.length,12);
